@@ -27,7 +27,7 @@ export default function Sidebar({
     }`}>
       <div>
         {/* Brand logo container */}
-        <div className="flex items-center justify-between gap-3 px-4 py-4.5 border-b border-slate-800/80 bg-[#071120]/40">
+        <div className="flex items-center justify-between gap-3 px-4 pt-6 pb-4 border-b border-slate-800/80 bg-[#071120]/40">
           <div className="flex items-center gap-3.5">
             <img 
               src={logo} 

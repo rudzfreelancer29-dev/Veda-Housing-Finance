@@ -29,7 +29,8 @@ export default function ManagerManagementTab({
   activeManagerFilter,
   setActiveManagerFilter,
   selectedManagers,
-  setSelectedManagers
+  setSelectedManagers,
+  onManagerClick
 }) {
   const itemsPerPage = 7;
 
@@ -131,7 +132,7 @@ export default function ManagerManagementTab({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
         {/* Left Table Panel */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col">
+        <div className="lg:col-span-3 bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col">
 
           {/* Table Control Header */}
           <div className="px-4 sm:px-6 py-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/50">
@@ -226,7 +227,16 @@ export default function ManagerManagementTab({
                             alt={manager.name}
                             className="w-8 h-8 rounded-full object-cover border border-slate-100"
                           />
-                          <span className="font-bold text-slate-800 block truncate max-w-[140px]">{manager.name}</span>
+                          <button
+                            onClick={() => {
+                              console.log("Manager name clicked in ManagerManagementTab:", manager);
+                              onManagerClick?.(manager);
+                            }}
+                            className="font-bold text-slate-800 block truncate max-w-[140px] text-left hover:text-[#f26e21] hover:underline cursor-pointer transition-all focus:outline-none"
+                            title={`View ${manager.name}'s assigned customers`}
+                          >
+                            {manager.name}
+                          </button>
                         </div>
                       </td>
                       <td className="py-4 px-4 text-slate-500 font-normal truncate max-w-[150px]">{manager.email}</td>
@@ -237,17 +247,16 @@ export default function ManagerManagementTab({
                       </td>
                       <td className="py-4 px-4">
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                            manager.status === "active"
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${manager.status === "active"
                               ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                               : "bg-rose-50 text-rose-700 border border-rose-200"
-                          }`}
+                            }`}
                         >
                           {manager.status}
                         </span>
                       </td>
                       <td className="py-4 px-4 font-bold text-center text-slate-700">{manager.applications}</td>
-                      <td className="py-4 px-6 text-right space-x-1 shrink-0">
+                      <td className="py-4 px-6 text-right space-x-1 shrink-0 whitespace-nowrap">
                         <button
                           onClick={() => onEdit(manager)}
                           className="p-1.5 text-[#f26e21] hover:bg-orange-50 rounded-lg inline-flex items-center transition-all"
@@ -257,11 +266,10 @@ export default function ManagerManagementTab({
                         </button>
                         <button
                           onClick={() => onToggleStatus(manager.id, manager.status, manager.name)}
-                          className={`p-1.5 rounded-lg inline-flex items-center transition-all ${
-                            manager.status === "active"
+                          className={`p-1.5 rounded-lg inline-flex items-center transition-all ${manager.status === "active"
                               ? "text-amber-600 hover:bg-amber-50"
                               : "text-emerald-600 hover:bg-emerald-50"
-                          }`}
+                            }`}
                           title={manager.status === "active" ? "Deactivate Manager" : "Activate Manager"}
                         >
                           {manager.status === "active" ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
@@ -331,40 +339,6 @@ export default function ManagerManagementTab({
           )}
 
         </div>
-
-        {/* Right Audit Log Sidebar Panel */}
-        <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm p-4 sm:p-6 space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h3 className="font-bold text-slate-800 text-sm sm:text-base">Audit Log</h3>
-            <History className="w-4 h-4 text-slate-400" />
-          </div>
-
-          <div className="space-y-4 max-h-[400px] sm:max-h-[500px] overflow-y-auto pr-1">
-            {auditLogs.slice(0, 8).map((log) => (
-              <div key={log.id} className="text-xs border-b border-slate-100/70 pb-3.5 last:border-0 last:pb-0">
-                <div className="flex items-center justify-between text-slate-400 mb-1.5">
-                  <span className="text-[10px]">{log.timestamp}</span>
-                  <span className="font-semibold px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[9px]">
-                    {log.manager}
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[8px] shrink-0 ${
-                    log.action === "Create" || log.action === "Register"
-                      ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                      : log.action === "Delete"
-                        ? "bg-rose-50 text-rose-700 border border-rose-100"
-                        : "bg-slate-100 text-slate-600 border border-slate-200"
-                  }`}>
-                    {log.action}
-                  </span>
-                  <p className="text-slate-700 font-semibold leading-relaxed break-words text-[11px]">{log.details}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
       </div>
 
     </div>
