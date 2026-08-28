@@ -5,25 +5,24 @@ import {
     UserCheck,
     FileText,
     BarChart3,
-    History,
-    Settings
+    History
 } from "lucide-react";
 
 // Import Generic Shared Components
-import Sidebar from "../components/Sidebar";
-import Navbar from "../components/Navbar";
+import Sidebar from "../../components/Sidebar";
+import Navbar from "../../components/Navbar";
 
 // Import Modular Tab Components
-import DashboardTab from "./admin/DashboardTab";
-import ManagerManagementTab from "./admin/ManagerManagementTab";
-import CustomersTab from "./admin/CustomersTab";
-import LoanApplicationsTab from "./admin/LoanApplicationsTab";
-import ReportsAnalyticsTab from "./admin/ReportsAnalyticsTab";
-import AuditLogsTab from "./admin/AuditLogsTab";
-import SettingsTab from "./admin/SettingsTab";
+import DashboardTab from "./DashboardTab";
+import ManagerManagementTab from "./ManagerManagementTab";
+import CustomersTab from "./CustomersTab";
+import LoanApplicationsTab from "./LoanApplicationsTab";
+import ReportsAnalyticsTab from "./ReportsAnalyticsTab";
+import AuditLogsTab from "./AuditLogsTab";
 
 // Import Modular Modal Components
-import ManagerModal from "./admin/ManagerModal";
+import ManagerModal from "./ManagerModal";
+import ManagerCustomersModal from "./ManagerCustomersModal";
 
 // Initial Mock Data
 const INITIAL_MANAGERS = [
@@ -51,18 +50,26 @@ const INITIAL_CUSTOMERS = [
     { id: "CUST-9021", name: "Rahul Sharma", mobile: "9876543210", email: "rahul@gmail.com", dob: "1990-05-15", pan: "ABCDE1234F", aadhaar: "1234 5678 9012", income: 65000, loanReq: 1500000, status: "Under Review" },
     { id: "CUST-4432", name: "Priya Patel", mobile: "9812345678", email: "priya.p@gmail.com", dob: "1994-08-22", pan: "FGHIJ5678K", aadhaar: "9876 5432 1098", income: 85000, loanReq: 2500000, status: "Eligible" },
     { id: "CUST-1092", name: "Amit Kumar", mobile: "9988776655", email: "amit.k@gmail.com", dob: "1988-12-01", pan: "LMNOP9012Q", aadhaar: "4567 8901 2345", income: 45000, loanReq: 800000, status: "New Registration" },
-    { id: "CUST-7782", name: "Sneha Reddy", mobile: "9123450987", email: "sneha.r@gmail.com", dob: "1992-03-10", pan: "RSTUV3456W", aadhaar: "5678 9012 3456", income: 120000, loanReq: 5000000, status: "Payment Completed" }
+    { id: "CUST-7782", name: "Sneha Reddy", mobile: "9123450987", email: "sneha.r@gmail.com", dob: "1992-03-10", pan: "RSTUV3456W", aadhaar: "5678 9012 3456", income: 120000, loanReq: 5000000, status: "Payment Completed" },
+    { id: "CUST-5511", name: "Vikram Malhotra", mobile: "9555111222", email: "vikram.m@gmail.com", dob: "1987-11-20", pan: "JKLMN4567P", aadhaar: "6543 2109 8765", income: 95000, loanReq: 3000000, status: "Under Review" },
+    { id: "CUST-8833", name: "Ananya Rao", mobile: "9888333444", email: "ananya.r@gmail.com", dob: "1995-02-14", pan: "OPQRS8901T", aadhaar: "8765 4321 0987", income: 75000, loanReq: 1800000, status: "Under Review" },
+    { id: "CUST-2233", name: "Rajesh Gupta", mobile: "9222333444", email: "rajesh.g@gmail.com", dob: "1982-06-25", pan: "UVWXY2345Z", aadhaar: "3456 7890 1234", income: 110000, loanReq: 4000000, status: "Approved" },
+    { id: "CUST-6677", name: "Meera Nair", mobile: "9666777888", email: "meera.n@gmail.com", dob: "1991-09-05", pan: "ABCDE9876G", aadhaar: "9012 3456 7890", income: 55000, loanReq: 1200000, status: "Rejected" }
 ];
 
 const INITIAL_APPLICATIONS = [
     { id: "APP-301", customerId: "CUST-9021", customerName: "Rahul Sharma", amount: 1500000, manager: "David Fhone", status: "Under Review", date: "2026-08-20" },
     { id: "APP-302", customerId: "CUST-4432", customerName: "Priya Patel", amount: 2500000, manager: "John Smith", status: "Eligible", date: "2026-08-22" },
     { id: "APP-303", customerId: "CUST-1092", customerName: "Amit Kumar", amount: 800000, manager: "Biaton Naera", status: "New Registration", date: "2026-08-25" },
-    { id: "APP-304", customerId: "CUST-7782", customerName: "Sneha Reddy", amount: 5000000, manager: "Edwars Rath", status: "Payment Completed", date: "2026-08-26" }
+    { id: "APP-304", customerId: "CUST-7782", customerName: "Sneha Reddy", amount: 5000000, manager: "Edwars Rath", status: "Payment Completed", date: "2026-08-26" },
+    { id: "APP-305", customerId: "CUST-5511", customerName: "Vikram Malhotra", amount: 3000000, manager: "Ademrt Boim", status: "Under Review", date: "2026-08-26" },
+    { id: "APP-306", customerId: "CUST-8833", customerName: "Ananya Rao", amount: 1800000, manager: "Saim Smith", status: "Under Review", date: "2026-08-27" },
+    { id: "APP-307", customerId: "CUST-2233", customerName: "Rajesh Gupta", amount: 4000000, manager: "David Fhone", status: "Approved", date: "2026-08-27" },
+    { id: "APP-308", customerId: "CUST-6677", customerName: "Meera Nair", amount: 1200000, manager: "John Smith", status: "Rejected", date: "2026-08-28" }
 ];
 
 export default function Admin() {
-    const [activeTab, setActiveTab] = useState("Manager Management");
+    const [activeTab, setActiveTab] = useState("Dashboard");
     const [managers, setManagers] = useState(INITIAL_MANAGERS);
     const [auditLogs, setAuditLogs] = useState(INITIAL_AUDIT_LOGS);
     const [customers, setCustomers] = useState(INITIAL_CUSTOMERS);
@@ -74,6 +81,7 @@ export default function Admin() {
     const [activeManagerFilter, setActiveManagerFilter] = useState("all");
     const [selectedManagers, setSelectedManagers] = useState([]);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [selectedManagerForPortfolio, setSelectedManagerForPortfolio] = useState(null);
 
     // Modals state
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -237,7 +245,6 @@ export default function Admin() {
                 items={sidebarNavigationItems}
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
-                bottomItem={{ name: "Settings", icon: Settings }}
                 isOpen={isSidebarOpen}
                 onClose={() => setIsSidebarOpen(false)}
                 onTabChange={() => {
@@ -256,7 +263,6 @@ export default function Admin() {
                     onActionClick={headerOnActionClick}
                     notifications={notifications}
                     onMarkNotificationsRead={() => setNotifications(notifications.map(n => ({ ...n, read: true })))}
-                    onSetup={() => setActiveTab("Settings")}
                     onLogout={() => alert("Logging out (Mock)")}
                     onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
                 />
@@ -264,7 +270,7 @@ export default function Admin() {
                 {/* Dynamic subcomponents route switch */}
                 <div className="flex-1 overflow-y-auto p-2 sm:p-2 md:p-2">
                     {/* Workspace Page Header Title */}
-                    <div className="mb-6">
+                    <div className="mb-6 sm:hidden">
                         <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">{activeTab}</h1>
                         <p className="text-xs text-slate-400 mt-1">Veda Housing Finance • Administrator Control</p>
                     </div>
@@ -293,11 +299,21 @@ export default function Admin() {
                             setActiveManagerFilter={setActiveManagerFilter}
                             selectedManagers={selectedManagers}
                             setSelectedManagers={setSelectedManagers}
+                            onManagerClick={(manager) => {
+                                console.log("onManagerClick triggered in admin.jsx for:", manager);
+                                setSelectedManagerForPortfolio(manager);
+                            }}
                         />
                     )}
 
                     {activeTab === "Customers" && (
-                        <CustomersTab customers={customers} searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+                        <CustomersTab
+                            customers={customers}
+                            searchQuery={searchQuery}
+                            setSearchQuery={setSearchQuery}
+                            applications={applications}
+                            onUpdateAppStatus={handleUpdateAppStatus}
+                        />
                     )}
 
                     {activeTab === "Loan Applications" && (
@@ -319,20 +335,7 @@ export default function Admin() {
                         <AuditLogsTab auditLogs={auditLogs} searchQuery={searchQuery} />
                     )}
 
-                    {activeTab === "Settings" && (
-                        <SettingsTab
-                            processingFee={processingFee}
-                            setProcessingFee={setProcessingFee}
-                            customFees={customFees}
-                            newFeeName={newFeeName}
-                            setNewFeeName={setNewFeeName}
-                            newFeeAmount={newFeeAmount}
-                            setNewFeeAmount={setNewFeeAmount}
-                            onAddFee={handleAddFee}
-                            onRemoveFee={handleRemoveFee}
-                            onUpdateProcessingFee={handleUpdateProcessingFee}
-                        />
-                    )}
+
                 </div>
             </main>
 
@@ -345,6 +348,17 @@ export default function Admin() {
                 managerForm={managerForm}
                 setManagerForm={setManagerForm}
             />
+
+            {/* Manager's Customers Portfolio Modal */}
+            {selectedManagerForPortfolio && (
+                <ManagerCustomersModal
+                    manager={selectedManagerForPortfolio}
+                    onClose={() => setSelectedManagerForPortfolio(null)}
+                    applications={applications}
+                    customers={customers}
+                    onUpdateAppStatus={handleUpdateAppStatus}
+                />
+            )}
         </div>
     );
 }

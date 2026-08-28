@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Bell, ChevronDown, Menu, Plus } from "lucide-react";
 
 export default function Navbar({
@@ -19,6 +19,24 @@ export default function Navbar({
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
+  const profileRef = useRef(null);
+  const notificationsRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setShowProfileMenu(false);
+      }
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   return (
     <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-4 sm:px-8 shadow-sm shrink-0 z-10 w-full">
       {/* Mobile Toggle Button */}
@@ -30,8 +48,15 @@ export default function Navbar({
         <Menu className="w-5.5 h-5.5" />
       </button>
 
+      {/* Page Title (visible on tablet & desktop only) */}
+      <div className="hidden sm:block select-none">
+        <h1 className="text-lg font-extrabold text-slate-800 tracking-tight">
+          {activeTab}
+        </h1>
+      </div>
+
       {/* Toolbar Controls */}
-      <div className="flex items-center gap-4 sm:gap-6">
+      <div className="flex items-center gap-4 sm:gap-6 ml-auto">
 
         {/* Dynamic Action Button */}
         {actionLabel && onActionClick && (
@@ -46,7 +71,7 @@ export default function Navbar({
         )}
 
         {/* Notifications Button & Dropdown */}
-        <div className="relative">
+        <div className="relative" ref={notificationsRef}>
           <button
             onClick={() => setShowNotifications(!showNotifications)}
             className="w-9 h-9 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full flex items-center justify-center relative transition-all"
@@ -97,7 +122,7 @@ export default function Navbar({
         </div>
 
         {/* Profile Dropdown */}
-        <div className="relative">
+        <div className="relative" ref={profileRef}>
           <button
             onClick={() => setShowProfileMenu(!showProfileMenu)}
             className="flex items-center gap-2.5 hover:bg-slate-50 px-2.5 py-1.5 rounded-lg transition-all"
