@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const pool = require("./db");
 const authRoutes = require("./routes/auth");
+const managerRoutes = require("./routes/managers");
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.get("/api/db-check", async (req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/managers", managerRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Veda LOS & CRM API running on http://localhost:${PORT}`));
