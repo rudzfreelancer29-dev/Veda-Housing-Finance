@@ -1,199 +1,159 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Chart from "react-apexcharts";
 import {
   FileText,
   CheckCircle2,
   XCircle,
   Clock,
-  Edit2,
-  Trash2,
-  Slash,
+  Activity,
+  CheckCheck,
+  TrendingUp,
+  UserPlus,
+  IndianRupee,
+  Users,
   AlertCircle,
   Filter,
-  ChevronDown
+  ChevronDown,
+  RefreshCw,
+  Search,
+  PieChart as PieIcon,
+  ShieldAlert
 } from "lucide-react";
 
-export default function DashboardTab({ applications = [], managers = [], auditLogs = [], customers = [] }) {
+export default function DashboardTab({
+  applications = [],
+  managers = [],
+  auditLogs = [],
+  customers = []
+}) {
   const [dateFilter, setDateFilter] = useState("month");
   const [customStartDate, setCustomStartDate] = useState("2026-08-01");
   const [customEndDate, setCustomEndDate] = useState("2026-08-31");
+  const [searchActivity, setSearchActivity] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
-  // Calculate or mock metric values based on selected date filter
-  const getMetrics = () => {
-    switch (dateFilter) {
-      case "today":
-        return {
-          total: 42,
-          approved: 28,
-          rejected: 5,
-          pending: 9,
-          totalTrend: "+8% today",
-          approvedRate: "66.7% rate",
-          rejectedRate: "11.9% rate",
-          periodLabel: "Today's metrics"
-        };
-      case "week":
-        return {
-          total: 280,
-          approved: 190,
-          rejected: 32,
-          pending: 58,
-          totalTrend: "+14% this week",
-          approvedRate: "67.8% rate",
-          rejectedRate: "11.4% rate",
-          periodLabel: "Weekly metrics"
-        };
-      case "year":
-        return {
-          total: 14200,
-          approved: 9850,
-          rejected: 1420,
-          pending: 2930,
-          totalTrend: "+18% YoY",
-          approvedRate: "69.3% rate",
-          rejectedRate: "10.0% rate",
-          periodLabel: "Yearly metrics"
-        };
-      case "custom":
-        return {
-          total: 540,
-          approved: 360,
-          rejected: 45,
-          pending: 135,
-          totalTrend: "Custom period",
-          approvedRate: "66.7% rate",
-          rejectedRate: "8.3% rate",
-          periodLabel: "Selected range"
-        };
-      case "all":
-        return {
-          total: 18500,
-          approved: 12400,
-          rejected: 1820,
-          pending: 4280,
-          totalTrend: "Lifetime total",
-          approvedRate: "67.0% rate",
-          rejectedRate: "9.8% rate",
-          periodLabel: "All time metrics"
-        };
-      case "month":
-      default:
-        return {
-          total: 1250,
-          approved: 850,
-          rejected: 120,
-          pending: 35,
-          totalTrend: "↑ +12% vs last mo",
-          approvedRate: "68.0% rate",
-          rejectedRate: "9.6% rate",
-          periodLabel: "Last 30 days"
-        };
-    }
+  // Currency Formatter
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0
+    }).format(amount);
   };
 
-  const metrics = getMetrics();
+  // Simulate refresh / loading state
+  // const handleRefresh = () => {
+  //   setIsLoading(true);
+  //   setHasError(false);
+  //   setTimeout(() => {
+  //     setIsLoading(false);
+  //   }, 600);
+  // };
 
-  // Line & Area chart options (Loan Application Trends)
-  const lineChartOptions = {
+  // 1. Application Overview Metrics computation
+  const metrics = useMemo(() => {
+    if (applications.length > 0) {
+      const total = applications.length;
+      const active = applications.filter(a => a.status === "In Progress" || a.status === "Under Review" || a.status === "Received").length;
+      const pending = applications.filter(a => a.status === "Pending" || a.status === "Pending Approval").length;
+      const approved = applications.filter(a => a.status === "Approved").length;
+      const rejected = applications.filter(a => a.status === "Rejected").length;
+      const completed = applications.filter(a => a.status === "Disbursed" || a.status === "Completed").length;
+      return { total, active, pending, approved, rejected, completed };
+    }
+
+    // Default KPI metrics based on filter selection
+    switch (dateFilter) {
+      case "today":
+        return { total: 42, active: 18, pending: 9, approved: 12, rejected: 2, completed: 1 };
+      case "week":
+        return { total: 280, active: 110, pending: 45, approved: 95, rejected: 18, completed: 12 };
+      case "year":
+        return { total: 14200, active: 3100, pending: 1850, approved: 7600, rejected: 1150, completed: 500 };
+      case "custom":
+        return { total: 540, active: 190, pending: 85, approved: 210, rejected: 35, completed: 20 };
+      case "all":
+        return { total: 18500, active: 3900, pending: 2200, approved: 10400, rejected: 1400, completed: 600 };
+      case "month":
+      default:
+        return { total: 1250, active: 480, pending: 145, approved: 510, rejected: 75, completed: 40 };
+    }
+  }, [applications, dateFilter]);
+
+  // 2. Customer Registration Trends (Last 6 Months Data)
+  const registrationTrendsOptions = {
     chart: {
-      id: "application-trends",
+      id: "registration-trends",
       toolbar: { show: false },
       zoom: { enabled: false },
       fontFamily: "Inter, sans-serif"
     },
-    colors: ["#1e70e3", "#10b981", "#f26e21"],
-    stroke: {
-      curve: "smooth",
-      width: 3
-    },
+    colors: ["#f26e21", "#1e70e3"],
+    stroke: { curve: "smooth", width: 3 },
     fill: {
       type: "gradient",
       gradient: {
         shadeIntensity: 1,
-        opacityFrom: 0.2,
-        opacityTo: 0.02,
+        opacityFrom: 0.35,
+        opacityTo: 0.05,
         stops: [0, 95, 100]
       }
     },
     dataLabels: { enabled: false },
     grid: {
       borderColor: "#f1f5f9",
+      strokeDashArray: 3,
       xaxis: { lines: { show: false } },
       yaxis: { lines: { show: true } }
     },
     xaxis: {
-      categories: ["Mar 10", "Mar 4", "Mar 7", "Mar 12", "Mar 15", "Mar 28", "Mar 30"],
+      categories: ["Mar", "Apr", "May", "Jun", "Jul", "Aug"],
       axisBorder: { show: false },
       axisTicks: { show: false },
-      labels: {
-        style: {
-          colors: "#94a3b8",
-          fontSize: "10px",
-          fontWeight: 600
-        }
-      }
+      labels: { style: { colors: "#94a3b8", fontSize: "11px", fontWeight: 600 } }
     },
     yaxis: {
-      min: 0,
-      max: 200,
-      tickAmount: 4,
-      labels: {
-        style: {
-          colors: "#94a3b8",
-          fontSize: "10px",
-          fontWeight: 600
-        }
-      }
+      labels: { style: { colors: "#94a3b8", fontSize: "11px", fontWeight: 600 } }
     },
-    legend: {
-      position: "top",
-      horizontalAlign: "center",
-      fontWeight: 600,
-      fontSize: "11px",
-      markers: { radius: 12 },
-      itemMargin: { horizontal: 10 }
-    },
-    tooltip: {
-      theme: "light",
-      x: { show: true }
-    }
+    tooltip: { theme: "light" }
   };
 
-  const lineChartSeries = [
+  const registrationTrendsSeries = [
     {
-      name: "Received",
-      data: [40, 110, 75, 120, 200, 140, 190]
-    },
-    {
-      name: "Approved",
-      data: [30, 60, 50, 85, 130, 95, 125]
-    },
-    {
-      name: "Rejected",
-      data: [15, 25, 20, 30, 45, 30, 35]
+      name: "Registrations",
+      data: [320, 450, 580, 720, 890, 1140]
     }
   ];
 
-  // Donut chart options (System Activity by User Role)
-  const donutChartOptions = {
-    chart: {
-      fontFamily: "Inter, sans-serif"
-    },
-    colors: ["#1e70e3", "#10b981", "#f26e21"],
-    labels: ["Superadmin", "Manager", "Admin"],
+  const totalCustomerRegistrations = customers.length > 0 ? customers.length : 4100;
+
+  // 3. Payment Collection Summary Mock/Data
+  const paymentSummary = {
+    collected: 42500000, // ₹4.25 Cr
+    pending: 8540000,    // ₹85.4 Lakhs
+    failed: 1220000,     // ₹12.2 Lakhs
+    refunded: 650000     // ₹6.5 Lakhs
+  };
+
+  // 4. Loan Eligibility Statistics Donut/Bar Chart
+  const eligibilityOptions = {
+    chart: { fontFamily: "Inter, sans-serif" },
+    colors: ["#10b981", "#f59e0b", "#f43f5e"],
+    labels: ["Eligible", "Pending Assessment", "Rejected"],
     plotOptions: {
       pie: {
         donut: {
-          size: "62%",
+          size: "68%",
           labels: {
             show: true,
             total: {
               show: true,
-              label: "Activity",
+              label: "Eligibility Rate",
               color: "#64748b",
               fontSize: "11px",
               fontWeight: 600,
-              formatter: () => "100%"
+              formatter: () => "65.6%"
             }
           }
         }
@@ -202,323 +162,597 @@ export default function DashboardTab({ applications = [], managers = [], auditLo
     dataLabels: { enabled: false },
     legend: {
       position: "bottom",
-      horizontalAlign: "center",
+      fontSize: "11px",
       fontWeight: 600,
-      fontSize: "10px",
-      markers: { radius: 12 },
-      itemMargin: { horizontal: 5, vertical: 5 }
+      markers: { radius: 12 }
     },
     stroke: { show: false }
   };
 
-  const donutChartSeries = [65, 25, 10];
+  const eligibilitySeries = [820, 280, 150];
 
-  // Critical Tasks Mock data with improved risk badge styling
-  const criticalTasks = [
-    { id: "01001301", type: "Received", risk: "High", riskColor: "bg-rose-50 text-rose-700 border-rose-200/60", manager: "John Smith", badgeColor: "bg-[#f26e21]/10 text-[#f26e21] border-[#f26e21]/20", action: "Quick-acquired" },
-    { id: "01001102", type: "Approved", risk: "Medium", riskColor: "bg-amber-50 text-amber-700 border-amber-200/60", manager: "David Fhone", badgeColor: "bg-[#f26e21]/10 text-[#f26e21] border-[#f26e21]/20", action: "Quick-acquired" },
-    { id: "01001103", type: "Received", risk: "High", riskColor: "bg-rose-50 text-rose-700 border-rose-200/60", manager: "Ademert Baim", badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200/60", action: "Quick-acquired" }
-  ];
+  // 5. Manager Performance Data
+  const managerPerformanceList = useMemo(() => {
+    if (managers.length > 0) {
+      return managers.map((m, idx) => ({
+        id: m.id || idx,
+        name: m.name || "Manager",
+        processed: m.applications || Math.floor(Math.random() * 40) + 10,
+        completed: Math.floor((m.applications || 20) * 0.7),
+        rejected: Math.floor((m.applications || 20) * 0.15),
+        registrations: Math.floor(Math.random() * 30) + 5,
+        conversionRate: Math.min(88, Math.max(55, Math.floor(Math.random() * 30) + 60))
+      }));
+    }
+
+    return [
+      { id: 1, name: "David Fhone", processed: 36, completed: 26, rejected: 4, registrations: 22, conversionRate: 72 },
+      { id: 2, name: "Edwars Rath", processed: 31, completed: 22, rejected: 3, registrations: 18, conversionRate: 71 },
+      { id: 3, name: "John Smith", processed: 18, completed: 12, rejected: 2, registrations: 14, conversionRate: 66 },
+      { id: 4, name: "Biaton Naera", processed: 13, completed: 9, rejected: 1, registrations: 10, conversionRate: 69 },
+      { id: 5, name: "Ademrt Boim", processed: 10, completed: 6, rejected: 3, registrations: 7, conversionRate: 60 }
+    ];
+  }, [managers]);
+
+  // 6. Recent Activities Data (Latest 10)
+  const recentActivitiesList = useMemo(() => {
+    if (auditLogs.length > 0) {
+      return auditLogs.slice(0, 10).map((log, index) => ({
+        id: log.id || index + 1,
+        customerName: log.manager || log.details || "Customer",
+        refId: `VEDA-2026-0${100 + index}`,
+        status: log.action || "Updated",
+        updatedAt: log.timestamp || "Just now"
+      }));
+    }
+
+    return [
+      { id: 1, customerName: "Rajesh Kumar", refId: "VEDA-2026-0101", status: "Approved", updatedAt: "10 mins ago" },
+      { id: 2, customerName: "Ananya Sharma", refId: "VEDA-2026-0102", status: "Under Review", updatedAt: "25 mins ago" },
+      { id: 3, customerName: "Vikram Malhotra", refId: "VEDA-2026-0103", status: "Disbursed", updatedAt: "1 hour ago" },
+      { id: 4, customerName: "Priya Patel", refId: "VEDA-2026-0104", status: "Pending Approval", updatedAt: "2 hours ago" },
+      { id: 5, customerName: "Suresh Menon", refId: "VEDA-2026-0105", status: "Rejected", updatedAt: "3 hours ago" },
+      { id: 6, customerName: "Meera Reddy", refId: "VEDA-2026-0106", status: "In Progress", updatedAt: "4 hours ago" },
+      { id: 7, customerName: "Amitabh Verma", refId: "VEDA-2026-0107", status: "Approved", updatedAt: "5 hours ago" },
+      { id: 8, customerName: "Sneha Joshi", refId: "VEDA-2026-0108", status: "Documents Pending", updatedAt: "6 hours ago" },
+      { id: 9, customerName: "Rohan Das", refId: "VEDA-2026-0109", status: "Disbursed", updatedAt: "8 hours ago" },
+      { id: 10, customerName: "Kavita Rao", refId: "VEDA-2026-0110", status: "Under Review", updatedAt: "12 hours ago" }
+    ];
+  }, [auditLogs]);
+
+  const filteredActivities = useMemo(() => {
+    if (!searchActivity) return recentActivitiesList;
+    return recentActivitiesList.filter(
+      act =>
+        act.customerName.toLowerCase().includes(searchActivity.toLowerCase()) ||
+        act.refId.toLowerCase().includes(searchActivity.toLowerCase()) ||
+        act.status.toLowerCase().includes(searchActivity.toLowerCase())
+    );
+  }, [recentActivitiesList, searchActivity]);
+
+  // Helper badge color for activity status
+  const getStatusBadgeClass = (status) => {
+    switch (status?.toLowerCase()) {
+      case "approved":
+      case "disbursed":
+      case "completed":
+        return "bg-emerald-50 text-emerald-700 border-emerald-200";
+      case "rejected":
+      case "failed":
+        return "bg-rose-50 text-rose-700 border-rose-200";
+      case "in progress":
+      case "under review":
+        return "bg-blue-50 text-blue-700 border-blue-200";
+      default:
+        return "bg-amber-50 text-amber-700 border-amber-200";
+    }
+  };
+
+  if (hasError) {
+    return (
+      <div className="w-full bg-rose-50 border border-rose-200 rounded-2xl p-8 text-center space-y-4">
+        <ShieldAlert className="w-12 h-12 text-rose-600 mx-auto" />
+        <h3 className="text-lg font-bold text-rose-900">Failed to load Dashboard data</h3>
+        <p className="text-sm text-rose-700">Something went wrong while fetching analytics metrics.</p>
+        <button
+          onClick={handleRefresh}
+          className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-xs transition-all shadow-sm cursor-pointer"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full space-y-3.5 sm:space-y-4">
-      
-      {/* Mobile-Optimized Filter Bar (Visible on mobile screens) */}
-      <div className="block sm:hidden bg-white border border-slate-200/80 p-3 rounded-2xl shadow-xs space-y-3 w-full">
-        {/* Top Header: Status & Dropdown */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span className="w-2 h-2 rounded-full bg-[#f26e21] animate-pulse shrink-0"></span>
-            <span className="text-xs font-extrabold text-slate-800 tracking-tight shrink-0">Timeline:</span>
-            <span className="text-[10px] font-bold text-[#f26e21] bg-orange-50 px-2 py-0.5 rounded-md border border-orange-100 uppercase tracking-wider truncate">
+    <div className="w-full space-y-4 sm:space-y-6">
+      {/* Date Filter & Control Bar */}
+      <div className="bg-white border border-slate-200/80 p-3.5 sm:p-4 rounded-2xl shadow-xs w-full overflow-hidden">
+        {/* Mobile Filter View (< sm) */}
+        <div className="sm:hidden space-y-3 w-full">
+          {/* Top Header: Title & Active Badge */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#f26e21] animate-pulse shrink-0"></span>
+              <h2 className="text-xs font-extrabold text-slate-800 tracking-tight">Timeline Metrics</h2>
+            </div>
+            <span className="text-[10px] font-extrabold text-[#f26e21] bg-orange-50 px-2.5 py-0.5 rounded-md border border-orange-100 uppercase tracking-wider">
               {dateFilter === "all" ? "All Time" : dateFilter === "today" ? "Today" : dateFilter === "week" ? "This Week" : dateFilter === "month" ? "This Month" : dateFilter === "year" ? "This Year" : "Custom"}
             </span>
           </div>
 
-          <div className="relative shrink-0">
+          {/* Preset Select Dropdown */}
+          <div className="relative w-full">
             <select
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className="bg-slate-100 text-slate-800 font-bold text-xs pl-3 pr-7 py-1.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#f26e21]/20 appearance-none cursor-pointer"
+              className="w-full bg-slate-100 text-slate-800 font-bold text-xs px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#f26e21]/20 appearance-none cursor-pointer"
             >
               <option value="all">All Time</option>
               <option value="today">Today</option>
               <option value="week">This Week</option>
               <option value="month">This Month</option>
               <option value="year">This Year</option>
+              <option value="custom">Custom Date Range</option>
             </select>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-500 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <ChevronDown className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
+
+          {/* Custom Date Inputs (Clean 2-Column Grid) */}
+          <div className="grid grid-cols-2 gap-2 bg-slate-50 border border-slate-200/70 p-2.5 rounded-xl w-full">
+            <div className="flex flex-col gap-1 min-w-0">
+              <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">Start Date</label>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => {
+                  setCustomStartDate(e.target.value);
+                  setDateFilter("custom");
+                }}
+                className="w-full bg-white border border-slate-200 text-xs font-bold text-slate-700 px-2 py-1.5 rounded-lg focus:outline-none focus:border-[#f26e21] focus:ring-1 focus:ring-[#f26e21]/20 min-w-0"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1 min-w-0">
+              <label className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">End Date</label>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => {
+                  setCustomEndDate(e.target.value);
+                  setDateFilter("custom");
+                }}
+                className="w-full bg-white border border-slate-200 text-xs font-bold text-slate-700 px-2 py-1.5 rounded-lg focus:outline-none focus:border-[#f26e21] focus:ring-1 focus:ring-[#f26e21]/20 min-w-0"
+              />
+            </div>
           </div>
         </div>
 
-        {/* Bottom Header: Date Range Pickers Grid */}
-        <div className="grid grid-cols-2 gap-2 bg-slate-50 border border-slate-200/70 p-2 rounded-xl">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">Start Date</span>
-            <input
-              type="date"
-              value={customStartDate}
-              onChange={(e) => {
-                setCustomStartDate(e.target.value);
-                setDateFilter("custom");
-              }}
-              className="bg-white border border-slate-200/80 text-[11px] font-bold text-slate-700 px-2 py-1 rounded-lg focus:outline-none w-full"
-            />
+        {/* Desktop/Tablet Filter View (>= sm) */}
+        <div className="hidden sm:flex flex-col md:flex-row md:items-center justify-between gap-3 w-full">
+          {/* Indicator */}
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#f26e21] animate-pulse shrink-0"></span>
+            <h2 className="text-xs sm:text-sm font-extrabold text-slate-800 tracking-tight">Analytics Overview:</h2>
+            <span className="text-[10px] font-bold text-[#f26e21] bg-orange-50 px-2 py-0.5 rounded-md border border-orange-100 uppercase tracking-wider">
+              {dateFilter === "all" ? "All Time" : dateFilter === "today" ? "Today" : dateFilter === "week" ? "This Week" : dateFilter === "month" ? "This Month" : dateFilter === "year" ? "This Year" : "Custom Range"}
+            </span>
           </div>
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">End Date</span>
-            <input
-              type="date"
-              value={customEndDate}
-              onChange={(e) => {
-                setCustomEndDate(e.target.value);
-                setDateFilter("custom");
-              }}
-              className="bg-white border border-slate-200/80 text-[11px] font-bold text-slate-700 px-2 py-1 rounded-lg focus:outline-none w-full"
-            />
+
+          {/* Presets & Pickers */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl gap-0.5">
+              {[
+                { id: "all", label: "All Time" },
+                { id: "today", label: "Today" },
+                { id: "week", label: "This Week" },
+                { id: "month", label: "This Month" },
+                { id: "year", label: "This Year" }
+              ].map((preset) => (
+                <button
+                  key={preset.id}
+                  onClick={() => setDateFilter(preset.id)}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all shrink-0 whitespace-nowrap cursor-pointer ${
+                    dateFilter === preset.id
+                      ? "bg-[#f26e21] text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 px-2.5 py-1.5 rounded-xl text-xs shrink-0">
+              <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => {
+                  setCustomStartDate(e.target.value);
+                  setDateFilter("custom");
+                }}
+                className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
+              />
+              <span className="text-[10px] text-slate-400 font-bold px-0.5">to</span>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => {
+                  setCustomEndDate(e.target.value);
+                  setDateFilter("custom");
+                }}
+                className="bg-transparent text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
+              />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Desktop/Tablet Integrated Analytics Filter Control Bar (Visible on tablet & desktop) */}
-      <div className="hidden sm:flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white border border-slate-200/80 p-2.5 sm:p-3 rounded-2xl shadow-xs w-full">
-        {/* Left: Section Indicator Badge */}
-        <div className="flex items-center gap-2 px-1">
-          <span className="w-2 h-2 rounded-full bg-[#f26e21] animate-pulse shrink-0"></span>
-          <span className="text-xs font-extrabold text-slate-800 tracking-tight">Timeline Metrics:</span>
-          <span className="text-[10px] font-bold text-[#f26e21] bg-orange-50 px-2 py-0.5 rounded-md border border-orange-100 uppercase tracking-wider">
-            {dateFilter === "all" ? "All Time" : dateFilter === "today" ? "Today" : dateFilter === "week" ? "This Week" : dateFilter === "month" ? "This Month" : dateFilter === "year" ? "This Year" : "Custom Range"}
-          </span>
-        </div>
-
-        {/* Right: Integrated Filter Controls */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Segmented Control Pill Bar */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl gap-0.5 overflow-x-auto max-w-full whitespace-nowrap">
-            {[
-              { id: "all", label: "All Time" },
-              { id: "today", label: "Today" },
-              { id: "week", label: "This Week" },
-              { id: "month", label: "This Month" },
-              { id: "year", label: "This Year" }
-            ].map((preset) => (
-              <button
-                key={preset.id}
-                onClick={() => setDateFilter(preset.id)}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all shrink-0 whitespace-nowrap ${
-                  dateFilter === preset.id
-                    ? "bg-[#f26e21] text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
-                }`}
-              >
-                {preset.label}
-              </button>
-            ))}
+      {/* SECTION 1: Application Overview (6 KPI Grid) */}
+      <div className="space-y-2">
+        <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider px-1">Application Overview</h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-3.5 w-full">
+          {/* Total */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xs p-3.5 flex flex-col justify-between hover:shadow-md transition-all duration-200 min-w-0">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider truncate">Total</span>
+              <div className="w-8 h-8 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
+                <FileText className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <span className="text-xl sm:text-2xl font-extrabold text-slate-800 block leading-tight">
+                {isLoading ? "..." : metrics.total.toLocaleString()}
+              </span>
+              <span className="text-[10px] font-bold text-blue-600 block mt-0.5 truncate">All Submissions</span>
+            </div>
           </div>
 
-          {/* Date Picker Range Inputs */}
-          <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 px-2.5 py-1.5 rounded-xl text-xs shrink-0 max-w-full overflow-x-auto">
-            <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            <input
-              type="date"
-              value={customStartDate}
-              onChange={(e) => {
-                setCustomStartDate(e.target.value);
-                setDateFilter("custom");
-              }}
-              className="bg-transparent text-[11px] sm:text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
-            />
-            <span className="text-[10px] text-slate-400 font-bold px-0.5">to</span>
-            <input
-              type="date"
-              value={customEndDate}
-              onChange={(e) => {
-                setCustomEndDate(e.target.value);
-                setDateFilter("custom");
-              }}
-              className="bg-transparent text-[11px] sm:text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
-            />
+          {/* Active */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xs p-3.5 flex flex-col justify-between hover:shadow-md transition-all duration-200 min-w-0">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider truncate">Active</span>
+              <div className="w-8 h-8 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center shrink-0">
+                <Activity className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <span className="text-xl sm:text-2xl font-extrabold text-slate-800 block leading-tight">
+                {isLoading ? "..." : metrics.active.toLocaleString()}
+              </span>
+              <span className="text-[10px] font-bold text-indigo-600 block mt-0.5 truncate">In Processing</span>
+            </div>
+          </div>
+
+          {/* Pending */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xs p-3.5 flex flex-col justify-between hover:shadow-md transition-all duration-200 min-w-0">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider truncate">Pending</span>
+              <div className="w-8 h-8 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center shrink-0">
+                <Clock className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <span className="text-xl sm:text-2xl font-extrabold text-slate-800 block leading-tight">
+                {isLoading ? "..." : metrics.pending.toLocaleString()}
+              </span>
+              <span className="text-[10px] font-bold text-amber-600 block mt-0.5 truncate">Needs Review</span>
+            </div>
+          </div>
+
+          {/* Approved */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xs p-3.5 flex flex-col justify-between hover:shadow-md transition-all duration-200 min-w-0">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider truncate">Approved</span>
+              <div className="w-8 h-8 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shrink-0">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <span className="text-xl sm:text-2xl font-extrabold text-slate-800 block leading-tight">
+                {isLoading ? "..." : metrics.approved.toLocaleString()}
+              </span>
+              <span className="text-[10px] font-bold text-emerald-600 block mt-0.5 truncate">Ready for Sanction</span>
+            </div>
+          </div>
+
+          {/* Rejected */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xs p-3.5 flex flex-col justify-between hover:shadow-md transition-all duration-200 min-w-0">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider truncate">Rejected</span>
+              <div className="w-8 h-8 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center shrink-0">
+                <XCircle className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <span className="text-xl sm:text-2xl font-extrabold text-slate-800 block leading-tight">
+                {isLoading ? "..." : metrics.rejected.toLocaleString()}
+              </span>
+              <span className="text-[10px] font-bold text-rose-600 block mt-0.5 truncate">Not Qualified</span>
+            </div>
+          </div>
+
+          {/* Completed */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xs p-3.5 flex flex-col justify-between hover:shadow-md transition-all duration-200 min-w-0">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider truncate">Completed</span>
+              <div className="w-8 h-8 bg-teal-50 text-teal-600 rounded-xl flex items-center justify-center shrink-0">
+                <CheckCheck className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <span className="text-xl sm:text-2xl font-extrabold text-slate-800 block leading-tight">
+                {isLoading ? "..." : metrics.completed.toLocaleString()}
+              </span>
+              <span className="text-[10px] font-bold text-teal-600 block mt-0.5 truncate">Disbursed / Closed</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* KPI Banner Grid of 4 Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-3.5 w-full">
-        
-        {/* KPI 1: Total Applications */}
-        <div className="bg-white border border-slate-200/80 rounded-xl shadow-sm p-3.5 sm:p-4 flex items-center gap-3.5 hover:shadow-md transition-all duration-200 min-w-0">
-          <div className="w-11 h-11 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0 shadow-inner">
-            <FileText className="w-5.5 h-5.5" />
-          </div>
-          <div className="min-w-0">
-            <span className="text-xs text-slate-400 font-bold block uppercase tracking-wider leading-tight truncate">Total Applications</span>
-            <div className="flex items-baseline gap-2 mt-1 flex-wrap">
-              <span className="text-xl sm:text-2xl font-extrabold text-slate-800 leading-tight">
-                {metrics.total.toLocaleString()}
-              </span>
-              <span className="text-xs font-bold text-blue-600 flex items-center gap-0.5 whitespace-nowrap bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
-                {metrics.totalTrend}
-              </span>
+      {/* SECTION 3 & SECTION 5: Customer Trends + Eligibility Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* Customer Registration Trends (Last 6 Months) */}
+        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-extrabold text-slate-800 text-sm tracking-tight">Customer Registration Trends</h3>
+                <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 flex items-center gap-1">
+                  <TrendingUp className="w-3 h-3" /> +28% YoY
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 font-medium mt-0.5">Monthly customer onboarding for the last 6 months</p>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl flex items-center gap-2 self-start sm:self-auto">
+              <UserPlus className="w-4 h-4 text-[#f26e21]" />
+              <div>
+                <span className="text-[9px] font-bold text-slate-400 uppercase block leading-none">Total Customers</span>
+                <span className="text-xs font-extrabold text-slate-800 leading-tight">{totalCustomerRegistrations.toLocaleString()}</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* KPI 2: Total Approved */}
-        <div className="bg-white border border-slate-200/80 rounded-xl shadow-sm p-3.5 sm:p-4 flex items-center gap-3.5 hover:shadow-md transition-all duration-200 min-w-0">
-          <div className="w-11 h-11 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center shrink-0 shadow-inner">
-            <CheckCircle2 className="w-5.5 h-5.5" />
-          </div>
-          <div className="min-w-0">
-            <span className="text-xs text-slate-400 font-bold block uppercase tracking-wider leading-tight truncate">Total Approved</span>
-            <div className="flex items-baseline gap-2 mt-1 flex-wrap">
-              <span className="text-xl sm:text-2xl font-extrabold text-slate-800 leading-tight">
-                {metrics.approved.toLocaleString()}
-              </span>
-              <span className="text-xs font-bold text-emerald-600 flex items-center gap-0.5 whitespace-nowrap bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
-                {metrics.approvedRate}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* KPI 3: Total Rejected */}
-        <div className="bg-white border border-slate-200/80 rounded-xl shadow-sm p-3.5 sm:p-4 flex items-center gap-3.5 hover:shadow-md transition-all duration-200 min-w-0">
-          <div className="w-11 h-11 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center shrink-0 shadow-inner">
-            <XCircle className="w-5.5 h-5.5" />
-          </div>
-          <div className="min-w-0">
-            <span className="text-xs text-slate-400 font-bold block uppercase tracking-wider leading-tight truncate">Total Rejected</span>
-            <div className="flex items-baseline gap-2 mt-1 flex-wrap">
-              <span className="text-xl sm:text-2xl font-extrabold text-slate-800 leading-tight">
-                {metrics.rejected.toLocaleString()}
-              </span>
-              <span className="text-xs font-bold text-rose-600 flex items-center gap-0.5 whitespace-nowrap bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100">
-                {metrics.rejectedRate}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* KPI 4: Pending Approvals */}
-        <div className="bg-white border border-slate-200/80 rounded-xl shadow-sm p-3.5 sm:p-4 flex items-center gap-3.5 hover:shadow-md transition-all duration-200 min-w-0">
-          <div className="w-11 h-11 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center shrink-0 shadow-inner">
-            <Clock className="w-5.5 h-5.5" />
-          </div>
-          <div className="min-w-0">
-            <span className="text-xs text-slate-400 font-bold block uppercase tracking-wider leading-tight truncate">Pending Approvals</span>
-            <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <span className="text-xl sm:text-2xl font-extrabold text-slate-800 leading-tight">
-                {metrics.pending.toLocaleString()}
-              </span>
-              <span className="bg-amber-50 text-amber-700 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border border-amber-200/60 uppercase tracking-wider shrink-0 whitespace-nowrap">
-                Needs Action
-              </span>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      {/* Dynamic Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5 sm:gap-4">
-        
-        {/* Application trends area line chart */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200/80 p-4 sm:p-5 shadow-sm space-y-3">
-          <h3 className="font-bold text-slate-800 text-xs sm:text-sm tracking-tight">Loan Application Trends (Last 30 Days)</h3>
           <div className="w-full h-60 sm:h-64">
             <Chart
-              options={lineChartOptions}
-              series={lineChartSeries}
+              options={registrationTrendsOptions}
+              series={registrationTrendsSeries}
               type="area"
               height="100%"
             />
           </div>
         </div>
 
-        {/* System users donut chart */}
-        <div className="bg-white rounded-xl border border-slate-200/80 p-4 sm:p-5 shadow-sm space-y-3">
-          <h3 className="font-bold text-slate-800 text-xs sm:text-sm tracking-tight">System Activity by User Role</h3>
-          <div className="w-full h-60 sm:h-64 flex items-center justify-center">
+        {/* SECTION 5: Loan Eligibility Statistics */}
+        <div className="lg:col-span-5 bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-xs space-y-4 flex flex-col justify-between">
+          <div>
+            <h3 className="font-extrabold text-slate-800 text-sm tracking-tight">Loan Eligibility Statistics</h3>
+            <p className="text-[11px] text-slate-400 font-medium mt-0.5">Application assessment & eligibility breakdown</p>
+          </div>
+
+          <div className="w-full h-52 sm:h-56 flex items-center justify-center">
             <Chart
-              options={donutChartOptions}
-              series={donutChartSeries}
+              options={eligibilityOptions}
+              series={eligibilitySeries}
               type="donut"
               width="100%"
               height="100%"
             />
           </div>
-        </div>
 
-      </div>
-
-      {/* Critical Tasks Table Card */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col w-full">
-        <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-orange-50 text-[#f26e21] flex items-center justify-center font-bold shrink-0">
-              <AlertCircle className="w-4 h-4" />
+          <div className="grid grid-cols-3 gap-2 bg-slate-50 border border-slate-100 p-2.5 rounded-xl text-center">
+            <div>
+              <span className="text-[10px] text-slate-400 font-bold uppercase block">Eligible</span>
+              <span className="text-xs font-extrabold text-emerald-600">820</span>
             </div>
-            <div className="min-w-0">
-              <h3 className="font-bold text-slate-800 text-xs sm:text-sm tracking-tight leading-snug">Critical Tasks &amp; Pending Approvals</h3>
-              <p className="text-[11px] text-slate-400 font-medium truncate sm:whitespace-normal">Tasks requiring immediate administrator attention</p>
+            <div>
+              <span className="text-[10px] text-slate-400 font-bold uppercase block">Pending</span>
+              <span className="text-xs font-extrabold text-amber-600">280</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-slate-400 font-bold uppercase block">Rejected</span>
+              <span className="text-xs font-extrabold text-rose-600">150</span>
             </div>
           </div>
-          <span className="text-[10px] sm:text-xs bg-slate-200/80 text-slate-700 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full font-extrabold self-start sm:self-auto shrink-0">
-            {criticalTasks.length} pending tasks
+        </div>
+      </div>
+
+      {/* SECTION 4: Payment Collection Summary */}
+      <div className="space-y-2">
+        <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider px-1">Payment Collection Summary</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-3.5 w-full">
+          {/* Collected */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs flex items-center justify-between">
+            <div>
+              <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider block">Collected</span>
+              <span className="text-lg sm:text-xl font-extrabold text-slate-800 mt-1 block">
+                {formatCurrency(paymentSummary.collected)}
+              </span>
+              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 inline-block mt-1">
+                Successfully Received
+              </span>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-extrabold shrink-0">
+              <IndianRupee className="w-5 h-5" />
+            </div>
+          </div>
+
+          {/* Pending */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs flex items-center justify-between">
+            <div>
+              <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider block">Pending</span>
+              <span className="text-lg sm:text-xl font-extrabold text-slate-800 mt-1 block">
+                {formatCurrency(paymentSummary.pending)}
+              </span>
+              <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100 inline-block mt-1">
+                Awaiting Processing
+              </span>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-extrabold shrink-0">
+              <Clock className="w-5 h-5" />
+            </div>
+          </div>
+
+          {/* Failed */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs flex items-center justify-between">
+            <div>
+              <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider block">Failed</span>
+              <span className="text-lg sm:text-xl font-extrabold text-slate-800 mt-1 block">
+                {formatCurrency(paymentSummary.failed)}
+              </span>
+              <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100 inline-block mt-1">
+                Transaction Declined
+              </span>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-extrabold shrink-0">
+              <XCircle className="w-5 h-5" />
+            </div>
+          </div>
+
+          {/* Refunded */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs flex items-center justify-between">
+            <div>
+              <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider block">Refunded</span>
+              <span className="text-lg sm:text-xl font-extrabold text-slate-800 mt-1 block">
+                {formatCurrency(paymentSummary.refunded)}
+              </span>
+              <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100 inline-block mt-1">
+                Reversed to Customer
+              </span>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-extrabold shrink-0">
+              <RefreshCw className="w-5 h-5" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* SECTION 6: Manager Performance */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden w-full">
+        <div className="px-4 sm:px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="font-extrabold text-slate-800 text-sm tracking-tight">Manager Performance</h3>
+            <p className="text-[11px] text-slate-400 font-medium">Tracking applications, completed loans &amp; conversion rates per manager</p>
+          </div>
+          <span className="text-xs bg-orange-50 text-[#f26e21] border border-orange-100 px-3 py-1 rounded-full font-extrabold self-start sm:self-auto">
+            {managerPerformanceList.length} Managers Listed
           </span>
         </div>
 
         <div className="overflow-x-auto w-full">
-          <table className="w-full text-left border-collapse min-w-[700px]">
+          <table className="w-full text-left border-collapse min-w-[650px]">
             <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-100 text-xs font-bold text-slate-500 uppercase tracking-wider select-none whitespace-nowrap">
-                <th className="py-3.5 px-4 sm:px-6">Application ID</th>
-                <th className="py-3.5 px-4">Type</th>
-                <th className="py-3.5 px-4">Risk Level</th>
-                <th className="py-3.5 px-4">Manager Assigned</th>
-                <th className="py-3.5 px-4">Action Required</th>
-                <th className="py-3.5 px-4 sm:px-6 text-right">Actions</th>
+              <tr className="bg-slate-50/70 border-b border-slate-100 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider select-none whitespace-nowrap">
+                <th className="py-3 px-4 sm:px-6">Manager Name</th>
+                <th className="py-3 px-4 text-center">Applications Processed</th>
+                <th className="py-3 px-4 text-center">Completed</th>
+                <th className="py-3 px-4 text-center">Rejected</th>
+                <th className="py-3 px-4 text-center">Registrations Completed</th>
+                <th className="py-3 px-4 sm:px-6 text-right">Conversion Rate</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs sm:text-sm font-medium whitespace-nowrap">
-              {criticalTasks.map((task) => (
-                <tr key={task.id} className="hover:bg-slate-50/40 transition-colors">
-                  <td className="py-3.5 px-4 sm:px-6 font-mono font-bold text-[#f26e21]">{task.id}</td>
-                  <td className="py-3.5 px-4 font-semibold text-slate-700">{task.type}</td>
-                  <td className="py-3.5 px-4">
-                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold border uppercase tracking-wider ${task.riskColor}`}>
-                      {task.risk}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-200/80 text-slate-600 font-extrabold flex items-center justify-center text-[10px] shrink-0">
-                        {task.manager.charAt(0).toUpperCase()}
+              {managerPerformanceList.map((m) => (
+                <tr key={m.id} className="hover:bg-slate-50/60 transition-colors">
+                  <td className="py-3.5 px-4 sm:px-6 font-bold text-slate-800">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-full bg-[#0a182e] text-white font-extrabold text-xs flex items-center justify-center shrink-0 shadow-xs">
+                        {m.name.charAt(0)}
                       </div>
-                      <span className="font-bold text-slate-800">{task.manager}</span>
+                      <span>{m.name}</span>
                     </div>
                   </td>
-                  <td className="py-3.5 px-4">
-                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold border uppercase tracking-wider ${task.badgeColor}`}>
-                      {task.action}
+                  <td className="py-3.5 px-4 text-center font-bold text-slate-700">{m.processed}</td>
+                  <td className="py-3.5 px-4 text-center">
+                    <span className="bg-emerald-50 text-emerald-700 font-extrabold px-2.5 py-0.5 rounded-full border border-emerald-200/60 text-xs">
+                      {m.completed}
                     </span>
                   </td>
-                  <td className="py-3.5 px-4 sm:px-6 text-right space-x-1.5 shrink-0 whitespace-nowrap">
-                    <button className="p-1.5 text-[#f26e21] hover:bg-orange-50 rounded-lg inline-flex items-center transition-all" title="Edit Task">
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg inline-flex items-center transition-all" title="Delete Task">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                    <button className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg inline-flex items-center transition-all" title="Block Task">
-                      <Slash className="w-3.5 h-3.5" />
-                    </button>
+                  <td className="py-3.5 px-4 text-center">
+                    <span className="bg-rose-50 text-rose-700 font-extrabold px-2.5 py-0.5 rounded-full border border-rose-200/60 text-xs">
+                      {m.rejected}
+                    </span>
+                  </td>
+                  <td className="py-3.5 px-4 text-center font-bold text-slate-700">{m.registrations}</td>
+                  <td className="py-3.5 px-4 sm:px-6 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <div className="w-16 bg-slate-100 rounded-full h-2 overflow-hidden hidden sm:block">
+                        <div
+                          className="bg-[#f26e21] h-2 rounded-full"
+                          style={{ width: `${m.conversionRate}%` }}
+                        ></div>
+                      </div>
+                      <span className="font-extrabold text-xs text-[#f26e21]">{m.conversionRate}%</span>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* SECTION 2: Recent Activities (Latest 10) */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden w-full">
+        <div className="px-4 sm:px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 className="font-extrabold text-slate-800 text-sm tracking-tight">Recent Activities</h3>
+            <p className="text-[11px] text-slate-400 font-medium">Latest 10 customer &amp; loan application actions</p>
+          </div>
+
+          <div className="relative w-full sm:w-64">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search activity..."
+              value={searchActivity}
+              onChange={(e) => setSearchActivity(e.target.value)}
+              className="w-full bg-white border border-slate-200 rounded-xl py-1.5 pl-8 pr-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#f26e21]"
+            />
+          </div>
+        </div>
+
+        {filteredActivities.length === 0 ? (
+          <div className="p-8 text-center space-y-2">
+            <AlertCircle className="w-8 h-8 text-slate-400 mx-auto" />
+            <p className="text-xs text-slate-500 font-medium">No recent activities matching your search.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-left border-collapse min-w-[650px]">
+              <thead>
+                <tr className="bg-slate-50/70 border-b border-slate-100 text-[11px] font-extrabold text-slate-500 uppercase tracking-wider select-none whitespace-nowrap">
+                  <th className="py-3 px-4 sm:px-6">Customer Name</th>
+                  <th className="py-3 px-4">Reference / Application ID</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 sm:px-6 text-right">Updated Date / Time</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs sm:text-sm font-medium whitespace-nowrap">
+                {filteredActivities.map((act) => (
+                  <tr key={act.id} className="hover:bg-slate-50/60 transition-colors">
+                    <td className="py-3.5 px-4 sm:px-6 font-bold text-slate-800">
+                      {act.customerName}
+                    </td>
+                    <td className="py-3.5 px-4 font-mono font-bold text-[#f26e21]">
+                      {act.refId}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold border uppercase tracking-wider ${getStatusBadgeClass(act.status)}`}>
+                        {act.status}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 sm:px-6 text-right text-slate-500 text-xs font-semibold">
+                      {act.updatedAt}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
