@@ -4,6 +4,9 @@ const cors = require("cors");
 const pool = require("./db");
 const authRoutes = require("./routes/auth");
 const managerRoutes = require("./routes/managers");
+const customerRoutes = require("./routes/customers");
+const applicationRoutes = require("./routes/applications");
+const reportRoutes = require("./routes/reports");
 
 const app = express();
 
@@ -28,6 +31,9 @@ app.get("/api/db-check", async (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/managers", managerRoutes);
+app.use("/api/customers", customerRoutes);
+app.use("/api/applications", applicationRoutes);
+app.use("/api/reports", reportRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Veda LOS & CRM API running on http://localhost:${PORT}`));
