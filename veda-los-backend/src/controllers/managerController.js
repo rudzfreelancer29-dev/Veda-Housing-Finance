@@ -1,5 +1,6 @@
 const bcrypt = require("bcryptjs");
 const managerModel = require("../models/managerModel");
+const auditLogModel = require("../models/auditLogModel");
 
 // PDF Section 2.1: Super Admin can "Create, edit, activate, deactivate,
 // and delete Manager accounts." All 5 functions below map to that list.
@@ -21,6 +22,13 @@ async function createManager(req, res) {
   const passwordHash = await bcrypt.hash(password, 10);
   try {
     const manager = await managerModel.create({ name, email, passwordHash });
+    await auditLogModel.record({
+      userId: req.user.id,
+      action: "create_manager",
+      entity: "users",
+      entityId: manager.id,
+      details: `Created manager account: ${manager.email}`,
+    });
     res.status(201).json(manager);
   } catch (err) {
     if (err.code === "23505") return res.status(409).json({ message: "A user with this email already exists" });
@@ -35,6 +43,13 @@ async function updateManager(req, res) {
   try {
     const manager = await managerModel.update(req.params.id, { name, email });
     if (!manager) return res.status(404).json({ message: "Manager not found" });
+    await auditLogModel.record({
+      userId: req.user.id,
+      action: "update_manager",
+      entity: "users",
+      entityId: manager.id,
+      details: `Updated manager profile: ${manager.email}`,
+    });
     res.json(manager);
   } catch (err) {
     if (err.code === "23505") return res.status(409).json({ message: "A user with this email already exists" });
@@ -50,12 +65,30 @@ async function setManagerStatus(req, res) {
 
   const manager = await managerModel.setActiveStatus(req.params.id, is_active);
   if (!manager) return res.status(404).json({ message: "Manager not found" });
+  await auditLogModel.record({
+    userId: req.user.id,
+    action: is_active ? "activate_manager" : "deactivate_manager",
+    entity: "users",
+    entityId: manager.id,
+    details: `${is_active ? "Activated" : "Deactivated"} manager: ${manager.email}`,
+  });
   res.json(manager);
 }
 
 async function deleteManager(req, res) {
-  const deleted = await managerModel.deletePermanently(req.params.id);
-  if (!deleted) return res.status(404).json({ message: "Manager not found" });
+  // Fetch details first — once deleted, the row is gone, and the audit
+  // log needs to say *who* was deleted, not just "manager id=5".
+  const manager = await managerModel.findById(req.params.id);
+  if (!manager) return res.status(404).json({ message: "Manager not found" });
+
+  await managerModel.deletePermanently(req.params.id);
+  await auditLogModel.record({
+    userId: req.user.id,
+    action: "delete_manager",
+    entity: "users",
+    entityId: manager.id,
+    details: `Permanently deleted manager account: ${manager.email}`,
+  });
   res.json({ message: "Manager account permanently deleted" });
 }
 

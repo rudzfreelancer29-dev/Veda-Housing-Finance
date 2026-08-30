@@ -61,8 +61,17 @@ async function seed() {
         `INSERT INTO applications (customer_id, status, assigned_to) VALUES ($1, $2, $3)`,
         [id, c.status, managerId]
       );
+
+      // Sample admin notification — the real trigger (this insert firing
+      // automatically) gets wired in once the Manager-side customer
+      // registration API exists in a later phase.
+      await pool.query(
+        `INSERT INTO admin_notifications (actor_user_id, message, entity, entity_id)
+         VALUES ($1, $2, 'customers', $3)`,
+        [managerId, `Manager Priya registered a new customer: ${c.name}`, id]
+      );
     }
-    console.log("Seeded 4 sample customers with applications.");
+    console.log("Seeded 4 sample customers with applications and admin notifications.");
   } else {
     console.log("Customers already exist, skipping sample data.");
   }

@@ -7,6 +7,8 @@ const managerRoutes = require("./routes/managers");
 const customerRoutes = require("./routes/customers");
 const applicationRoutes = require("./routes/applications");
 const reportRoutes = require("./routes/reports");
+const auditLogRoutes = require("./routes/auditLogs");
+const notificationRoutes = require("./routes/notifications");
 
 const app = express();
 
@@ -34,6 +36,8 @@ app.use("/api/managers", managerRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/applications", applicationRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/audit-logs", auditLogRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Veda LOS & CRM API running on http://localhost:${PORT}`));

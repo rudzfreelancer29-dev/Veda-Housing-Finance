@@ -84,3 +84,29 @@ CREATE INDEX IF NOT EXISTS idx_applications_customer ON applications (customer_i
 CREATE INDEX IF NOT EXISTS idx_applications_status ON applications (status);
 
 CREATE INDEX IF NOT EXISTS idx_payments_application ON payments (application_id);
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users (id),
+    action VARCHAR(60) NOT NULL,
+    entity VARCHAR(60),
+    entity_id INTEGER,
+    details TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS admin_notifications (
+    id SERIAL PRIMARY KEY,
+    actor_user_id INTEGER REFERENCES users (id),
+    message VARCHAR(255) NOT NULL,
+    entity VARCHAR(60),
+    entity_id INTEGER,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs (user_id);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs (action);
+
+CREATE INDEX IF NOT EXISTS idx_admin_notifications_read ON admin_notifications (is_read);

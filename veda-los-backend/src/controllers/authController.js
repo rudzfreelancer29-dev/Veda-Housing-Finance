@@ -3,9 +3,13 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const pool = require("../db");
 const { sendEmail } = require("../utils/mailer");
+const auditLogModel = require("../models/auditLogModel");
 
 const RESET_TOKEN_EXPIRY_MINUTES = parseInt(process.env.RESET_TOKEN_EXPIRY_MINUTES || "30", 10);
 
+// Reset tokens are hashed before being stored — so even if the database
+// leaks, the raw token (the one emailed to the user) can never be
+// reconstructed from what's in the database. Same principle as passwords.
 function hashToken(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
@@ -41,6 +45,15 @@ async function login(req, res) {
     { expiresIn: process.env.JWT_EXPIRES_IN || "8h" }
   );
 
+  // PDF Section 9: "User Login Activity" audit log entry.
+  await auditLogModel.record({
+    userId: user.id,
+    action: "login",
+    entity: "users",
+    entityId: user.id,
+    details: `${user.role} logged in`,
+  });
+
   res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
 }
 
@@ -48,12 +61,17 @@ async function me(req, res) {
   res.json({ user: req.user });
 }
 
+// Step 1 of password reset: user submits their email. We generate a
+// one-time random token, store only its HASH, and "email" the raw token
+// (mocked for now — see sendResetEmail above).
 async function forgotPassword(req, res) {
   const { email } = req.body;
   if (!email) return res.status(400).json({ message: "Email is required" });
 
   const { rows } = await pool.query("SELECT id FROM users WHERE email = $1 AND is_active = TRUE", [email]);
 
+  // Respond the same way whether or not the email exists — this avoids
+  // leaking which emails are registered in the system to an attacker.
   if (rows[0]) {
     const rawToken = crypto.randomBytes(32).toString("hex");
     const tokenHash = hashToken(rawToken);
@@ -70,6 +88,9 @@ async function forgotPassword(req, res) {
   res.json({ message: "If that email is registered, a password reset link has been sent." });
 }
 
+// Step 2 of password reset: user submits the raw token (from the emailed
+// link) + a new password. We hash the incoming token and compare it
+// against the stored hash — never comparing raw tokens.
 async function resetPassword(req, res) {
   const { token, newPassword } = req.body;
   if (!token || !newPassword) return res.status(400).json({ message: "Token and newPassword are required" });
