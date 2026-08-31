@@ -3,7 +3,7 @@ import { Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck } from "lucide-react";
 import loginImg from "../assets/login_page_img.webp";
 import logo from "../assets/veda_housing_finance.jpeg";
 
-export default function Login({ onLogin }) {
+export default function Login({ onLogin, onNavigateRegister }) {
     const [formData, setFormData] = useState({
         email: "",
         password: "",
@@ -162,9 +162,21 @@ export default function Login({ onLogin }) {
                                 )}
                             </button>
                         </form>
+
+                        {/* Register Link */}
+                        <div className="mt-4 text-center">
+                            <p className="text-xs text-slate-500">
+                                Don't have an account?{" "}
+                                <button
+                                    type="button"
+                                    onClick={onNavigateRegister}
+                                    className="text-[#f26e21] font-semibold hover:underline cursor-pointer"
+                                >
+                                    Register
+                                </button>
+                            </p>
+                        </div>
                     </div>
-
-
                 </div>
 
                 {/* Right Section with Dark Navy Accent Banner matching Sidebar aesthetic */}
