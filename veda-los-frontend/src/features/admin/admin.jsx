@@ -9,8 +9,8 @@ import {
 } from "lucide-react";
 
 // Import Generic Shared Components
-import Sidebar from "../../components/Sidebar";
-import Navbar from "../../components/Navbar";
+import Sidebar from "./components/Sidebar";
+import Navbar from "./components/Navbar";
 
 // Import Modular Tab Components
 import DashboardTab from "./DashboardTab";
