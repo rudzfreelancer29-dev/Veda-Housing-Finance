@@ -1,5 +1,5 @@
 import React from "react";
-import logo from "../assets/veda_housing_finance.jpeg";
+import logo from "../../../assets/veda_housing_finance.jpeg";
 import { X } from "lucide-react";
 
 export default function Sidebar({

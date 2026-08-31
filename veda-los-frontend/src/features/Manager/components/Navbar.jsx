@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Bell, ChevronDown, Menu, Plus } from "lucide-react";
-import logo from "../assets/veda_housing_finance.jpeg";
+import logo from "../../../assets/veda_housing_finance.jpeg";
 
 export default function Navbar({
   activeTab,
