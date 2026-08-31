@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Login from "./Authentication/login";
+import Register from "./Authentication/Register";
 import Admin from "./features/admin/admin";
 
 export default function App() {
@@ -18,17 +19,30 @@ export default function App() {
     setCurrentPath(path);
   };
 
-  // If URL path is /login, render Login screen
-  if (currentPath === "/login") {
+  // If URL path is /register, render Register screen
+  if (currentPath === "/register") {
     return (
-      <Login
-        onLogin={(credentials) => {
-          navigateTo("/admin");
+      <Register
+          onRegister={(data) => {
+          navigateTo("/login");
         }}
+        onNavigateLogin={() => navigateTo("/login")}
       />
     );
   }
 
-  // Default / /admin route renders Admin Dashboard
-  return <Admin />;
+  // If URL path is /admin, render Admin Dashboard
+  if (currentPath === "/admin") {
+    return <Admin />;
+  }
+
+  // Default route (root "/" or "/login") renders Login screen
+  return (
+    <Login
+      onLogin={(credentials) => {
+        navigateTo("/admin");
+      }}
+      onNavigateRegister={() => navigateTo("/register")}
+    />
+  );
 }
