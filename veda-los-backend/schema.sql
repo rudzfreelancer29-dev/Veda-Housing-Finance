@@ -110,3 +110,15 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs (user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs (action);
 
 CREATE INDEX IF NOT EXISTS idx_admin_notifications_read ON admin_notifications (is_read);
+
+CREATE TABLE IF NOT EXISTS documents (
+    id SERIAL PRIMARY KEY,
+    customer_id INTEGER NOT NULL REFERENCES customers (id) ON DELETE CASCADE,
+    doc_type VARCHAR(60) NOT NULL,
+    file_name VARCHAR(255) NOT NULL,
+    file_path VARCHAR(500) NOT NULL,
+    uploaded_by INTEGER REFERENCES users (id),
+    uploaded_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_documents_customer ON documents (customer_id);
