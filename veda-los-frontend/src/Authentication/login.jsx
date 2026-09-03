@@ -1,9 +1,14 @@
 import React, { useState } from "react";
-import { Mail, Lock, Eye, EyeOff, ArrowRight, ShieldCheck } from "lucide-react";
+import PropTypes from "prop-types";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle, Loader2 } from "lucide-react";
+import { toast } from "react-toastify";
 import loginImg from "../assets/login_page_img.webp";
 import logo from "../assets/veda_housing_finance.jpeg";
+import apiService from "../services/api-service"; // Prefer pre-instantiated singleton
 
-export default function Login({ onLogin, onNavigateRegister }) {
+const ROLES = ["Admin", "Manager", "Customer"];
+
+export default function Login({ onLogin, onNavigateRegister, onForgotPassword }) {
     const [formData, setFormData] = useState({
         email: "",
         password: "",
@@ -12,17 +17,122 @@ export default function Login({ onLogin, onNavigateRegister }) {
     });
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState("");
+    const [errors, setErrors] = useState({});
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        setLoading(true);
-        setTimeout(() => {
-            setLoading(false);
-            if (onLogin) {
-                onLogin(formData);
-            }
-        }, 500);
+    const handleChange = (field, value) => {
+        setFormData((prev) => ({ ...prev, [field]: value }));
+        if (errors[field]) {
+            setErrors((prev) => ({ ...prev, [field]: "" }));
+        }
+        if (errorMessage) setErrorMessage(""); // Clear error when user types
     };
+
+    const validateForm = () => {
+        const newErrors = {};
+        const emailTrimmed = formData.email.trim();
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (!emailTrimmed) {
+            newErrors.email = "Email address is required.";
+        } else if (!emailRegex.test(emailTrimmed)) {
+            newErrors.email = "Please enter a valid email address.";
+        }
+
+        if (!formData.password) {
+            newErrors.password = "Password is required.";
+        } else if (formData.password.length < 6) {
+            newErrors.password = "Password must be at least 6 characters.";
+        }
+
+        setErrors(newErrors);
+
+        if (Object.keys(newErrors).length > 0) {
+            const firstError = Object.values(newErrors)[0];
+            toast.warn(firstError);
+            return false;
+        }
+        return true;
+    };
+
+    const handleRoleClick = (role) => {
+        if (role === "Customer") {
+            toast.info("Customer portal is under development. Please log in as Admin or Manager.");
+            return;
+        }
+        handleChange("role", role);
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        if (!validateForm()) {
+            return;
+        }
+
+        setLoading(true);
+        setErrorMessage("");
+
+        try {
+            // Pass full payload including role and rememberMe
+            const response = await apiService.login({
+                email: formData.email.trim(),
+                password: formData.password,
+                role: formData.role,
+                rememberMe: formData.rememberMe,
+            });
+
+            // Verify account role against selected portal role if returned by backend API
+            const rawRole = response.data?.role || response.data?.user?.role || response.data?.data?.role;
+
+            if (rawRole) {
+                const isResponseAdmin = rawRole.toLowerCase().includes("admin");
+                const isResponseManager = rawRole.toLowerCase().includes("manager");
+                const isSelectedAdmin = formData.role.toLowerCase() === "admin";
+                const isSelectedManager = formData.role.toLowerCase() === "manager";
+
+                if ((isSelectedAdmin && !isResponseAdmin) || (isSelectedManager && !isResponseManager)) {
+                    const errorMsg = "Invalid Credentials";
+                    setErrorMessage(errorMsg);
+                    toast.error(errorMsg);
+                    return;
+                }
+            }
+
+            // Store auth token and user details in localStorage (token valid for 8h)
+            if (response.data?.token) {
+                localStorage.setItem("token", response.data.token);
+                localStorage.setItem("token_expiry", (Date.now() + 8 * 60 * 60 * 1000).toString());
+            }
+            if (response.data?.user) {
+                localStorage.setItem("user", JSON.stringify(response.data.user));
+            }
+
+            toast.success(`${formData.role} login successful! Redirecting...`, {
+                autoClose: 2000,
+            });
+
+            setTimeout(() => {
+                toast.dismiss();
+                if (onLogin) {
+                    onLogin({
+                        ...(response?.data || {}),
+                        role: formData.role,
+                    });
+                }
+            }, 1000);
+        } catch (error) {
+            const message =
+                error.response?.data?.message ||
+                `Invalid email or password for ${formData.role} portal. Please try again.`;
+            setErrorMessage(message);
+            toast.error(message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+
 
     return (
         <div className="min-h-screen bg-slate-100/80 text-slate-800 flex items-center justify-center p-4 sm:p-6 lg:p-8 font-sans">
@@ -58,7 +168,7 @@ export default function Login({ onLogin, onNavigateRegister }) {
                         </div>
 
                         {/* Login Form */}
-                        <form onSubmit={handleSubmit} className="space-y-4">
+                        <form onSubmit={handleSubmit} noValidate className="space-y-4">
                             {/* Role Selection Tabs */}
                             <div>
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
@@ -69,7 +179,7 @@ export default function Login({ onLogin, onNavigateRegister }) {
                                         <button
                                             key={role}
                                             type="button"
-                                            onClick={() => setFormData({ ...formData, role })}
+                                            onClick={() => handleRoleClick(role)}
                                             className={`py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${formData.role === role
                                                 ? "bg-[#f26e21] text-white shadow-sm"
                                                 : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
@@ -90,13 +200,21 @@ export default function Login({ onLogin, onNavigateRegister }) {
                                     <Mail className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                                     <input
                                         type="email"
-                                        required
                                         placeholder="e.g. name@vedafinance.com"
                                         value={formData.email}
-                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-11 pr-4 text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:border-[#f26e21] focus:ring-2 focus:ring-[#f26e21]/20 transition-all"
+                                        onChange={(e) => handleChange("email", e.target.value)}
+                                        className={`w-full bg-slate-50 border ${errors.email
+                                            ? "border-red-500 focus:ring-red-500/20 focus:border-red-500"
+                                            : "border-slate-200 focus:border-[#f26e21] focus:ring-[#f26e21]/20"
+                                            } rounded-xl py-3 pl-11 pr-4 text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 transition-all`}
                                     />
                                 </div>
+                                {errors.email && (
+                                    <p className="text-xs text-red-500 font-medium mt-1 flex items-center gap-1">
+                                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                        {errors.email}
+                                    </p>
+                                )}
                             </div>
 
                             {/* Password */}
@@ -117,11 +235,13 @@ export default function Login({ onLogin, onNavigateRegister }) {
                                     <Lock className="w-5 h-5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                                     <input
                                         type={showPassword ? "text" : "password"}
-                                        required
                                         placeholder="••••••••"
                                         value={formData.password}
-                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-11 pr-11 text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:border-[#f26e21] focus:ring-2 focus:ring-[#f26e21]/20 transition-all"
+                                        onChange={(e) => handleChange("password", e.target.value)}
+                                        className={`w-full bg-slate-50 border ${errors.password
+                                            ? "border-red-500 focus:ring-red-500/20 focus:border-red-500"
+                                            : "border-slate-200 focus:border-[#f26e21] focus:ring-[#f26e21]/20"
+                                            } rounded-xl py-3 pl-11 pr-11 text-sm text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 transition-all`}
                                     />
                                     <button
                                         type="button"
@@ -131,6 +251,12 @@ export default function Login({ onLogin, onNavigateRegister }) {
                                         {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                                     </button>
                                 </div>
+                                {errors.password && (
+                                    <p className="text-xs text-red-500 font-medium mt-1 flex items-center gap-1">
+                                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                        {errors.password}
+                                    </p>
+                                )}
                             </div>
 
                             {/* Remember Me */}
@@ -139,7 +265,7 @@ export default function Login({ onLogin, onNavigateRegister }) {
                                     <input
                                         type="checkbox"
                                         checked={formData.rememberMe}
-                                        onChange={(e) => setFormData({ ...formData, rememberMe: e.target.checked })}
+                                        onChange={(e) => handleChange("rememberMe", e.target.checked)}
                                         className="w-4 h-4 rounded border-slate-300 text-[#f26e21] focus:ring-[#f26e21]"
                                     />
                                     Remember me on this device

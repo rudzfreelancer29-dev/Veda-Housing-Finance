@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { ToastContainer } from "react-toastify";
 import Login from "./Authentication/login";
 import Register from "./Authentication/Register";
 import Admin from "./features/admin/admin";
@@ -20,39 +21,55 @@ export default function App() {
     setCurrentPath(path);
   };
 
-  // If URL path is /register, render Register screen
-  if (currentPath === "/register") {
+  const renderComponent = () => {
+    if (currentPath === "/register") {
+      return (
+        <Register
+          onRegister={(data) => {
+            navigateTo("/login");
+          }}
+          onNavigateLogin={() => navigateTo("/login")}
+        />
+      );
+    }
+
+    if (currentPath === "/admin") {
+      return <Admin onLogout={() => navigateTo("/login")} />;
+    }
+
+    if (currentPath === "/manager") {
+      return <Manager onLogout={() => navigateTo("/login")} />;
+    }
+
     return (
-      <Register
-        onRegister={(data) => {
-          navigateTo("/login");
+      <Login
+        onLogin={(credentials) => {
+          if (credentials?.role === "Manager") {
+            navigateTo("/manager");
+          } else {
+            navigateTo("/admin");
+          }
         }}
-        onNavigateLogin={() => navigateTo("/login")}
+        onNavigateRegister={() => navigateTo("/register")}
       />
     );
-  }
+  };
 
-  // If URL path is /admin, render Admin Dashboard
-  if (currentPath === "/admin") {
-    return <Admin onLogout={() => navigateTo("/login")} />;
-  }
-
-  // If URL path is /manager, render Manager Dashboard
-  if (currentPath === "/manager") {
-    return <Manager onLogout={() => navigateTo("/login")} />;
-  }
-
-  // Default route (root "/" or "/login") renders Login screen
   return (
-    <Login
-      onLogin={(credentials) => {
-        if (credentials?.role === "Manager") {
-          navigateTo("/manager");
-        } else {
-          navigateTo("/admin");
-        }
-      }}
-      onNavigateRegister={() => navigateTo("/register")}
-    />
+    <>
+      <ToastContainer
+        position="bottom-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        style={{ zIndex: 99999 }}
+      />
+      {renderComponent()}
+    </>
   );
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Bell, ChevronDown, Menu, Plus } from "lucide-react";
 import logo from "../../../assets/veda_housing_finance.jpeg";
+import { toast } from "react-toastify";
 
 export default function Navbar({
   activeTab,
@@ -9,11 +10,10 @@ export default function Navbar({
   notifications = [],
   onMarkNotificationsRead,
   user = {
-    name: "Super Admin",
-    role: "Administrator",
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+    name: "Manager",
+    role: "Loan Operations Manager",
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100"
   },
-  onLogout,
   onSetup,
   onToggleSidebar
 }) {
@@ -22,6 +22,36 @@ export default function Navbar({
 
   const profileRef = useRef(null);
   const notificationsRef = useRef(null);
+
+  function getUserName() {
+  try {
+    // 1. Check localStorage "user"
+    const user = JSON.parse(localStorage.getItem("user") || "null");
+    if (user?.name) return user.name;
+
+    // 2. Fallback to JWT payload
+    const token = localStorage.getItem("token")?.split(".")[1];
+    if (token) {
+      const payload = JSON.parse(atob(token.replace(/-/g, "+").replace(/_/g, "/")));
+      return payload?.name || payload?.user?.name || "Manager";
+    }
+  } catch (err) {
+    console.error("Error reading user name:", err);
+  }
+
+  return "Manager";
+}
+
+function onLogout(){
+  try {
+    localStorage.clear();
+    toast.success("Logout successful");
+    window.location.href = "/login";
+  } catch (err) {
+    console.error("Logout error:", err);
+    toast.error("Logout failed");
+  }
+}
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -42,7 +72,6 @@ export default function Navbar({
     <header className="bg-white border-b border-slate-200 w-full shrink-0 z-10 shadow-xs">
       {/* Mobile Top Header (Visible on screens < md) */}
       <div className="flex md:hidden items-center justify-between p-3 sm:p-4 border-b border-slate-100">
-        {/* Left Side: Burger Menu Button & Logo */}
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
           <button
             onClick={onToggleSidebar}
@@ -52,7 +81,6 @@ export default function Navbar({
             <Menu className="w-5 h-5 text-slate-700" />
           </button>
 
-          {/* Logo on Page */}
           <div className="flex items-center gap-2.5 min-w-0">
             <img
               src={logo}
@@ -70,9 +98,7 @@ export default function Navbar({
           </div>
         </div>
 
-        {/* Right Side Controls: Notifications & Profile */}
         <div className="flex items-center gap-2 shrink-0">
-          {/* Notifications Button */}
           <div className="relative" ref={notificationsRef}>
             <button
               onClick={() => setShowNotifications(!showNotifications)}
@@ -123,7 +149,6 @@ export default function Navbar({
             )}
           </div>
 
-          {/* Profile Dropdown */}
           <div className="relative" ref={profileRef}>
             <button
               onClick={() => setShowProfileMenu(!showProfileMenu)}
@@ -140,7 +165,7 @@ export default function Navbar({
             {showProfileMenu && (
               <div className="absolute right-0 mt-2 w-44 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1 text-xs">
                 <div className="px-3 py-1.5 border-b border-slate-100 font-bold text-slate-700">
-                  {user.name}
+                  {getUserName()}
                 </div>
                 {onSetup && (
                   <button
@@ -256,7 +281,7 @@ export default function Navbar({
                 className="w-8 h-8 rounded-full border border-slate-200"
               />
               <div className="text-left">
-                <span className="block text-xs font-semibold text-slate-800 leading-3">{user.name}</span>
+                <span className="block text-xs font-semibold text-slate-800 leading-3">{getUserName()}</span>
                 <span className="text-[10px] text-slate-500">{user.role}</span>
               </div>
               <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
