@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Bell, ChevronDown, Menu, Plus } from "lucide-react";
 import logo from "../../../assets/veda_housing_finance.jpeg";
+import { toast } from "react-toastify";
 
 export default function Navbar({
   activeTab,
@@ -13,7 +14,6 @@ export default function Navbar({
     role: "Administrator",
     avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
   },
-  onLogout,
   onSetup,
   onToggleSidebar
 }) {
@@ -22,6 +22,43 @@ export default function Navbar({
 
   const profileRef = useRef(null);
   const notificationsRef = useRef(null);
+
+  function AdminName() {
+    try {
+      // 1. Read name from the JSON 'user' object stored during login
+      const userStr = localStorage.getItem("user");
+      if (userStr) {
+        const userObj = JSON.parse(userStr);
+        if (userObj?.name) return userObj.name;
+      }
+
+      // 2. Fallback: Decode user name directly from JWT token payload
+      const token = localStorage.getItem("token");
+      if (token) {
+        const payloadBase64 = token.split(".")[1];
+        if (payloadBase64) {
+          const decoded = JSON.parse(atob(payloadBase64.replace(/-/g, "+").replace(/_/g, "/")));
+          if (decoded?.name || decoded?.user?.name) {
+            return decoded?.name || decoded?.user?.name;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error reading admin name from localStorage:", err);
+    }
+    return user?.name || "Administrator";
+  }
+
+  function onLogout(){
+    try {
+      localStorage.clear();
+      toast.success("Logout successful");
+      window.location.href = "/login";
+    } catch (err) {
+      console.error("Logout error:", err);
+      toast.error("Logout failed");
+    }
+  }
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -36,7 +73,8 @@ export default function Navbar({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  }, []
+);
 
   return (
     <header className="bg-white border-b border-slate-200 w-full shrink-0 z-10 shadow-xs">
@@ -140,7 +178,7 @@ export default function Navbar({
             {showProfileMenu && (
               <div className="absolute right-0 mt-2 w-44 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1 text-xs">
                 <div className="px-3 py-1.5 border-b border-slate-100 font-bold text-slate-700">
-                  {user.name}
+                  {AdminName()}
                 </div>
                 {onSetup && (
                   <button

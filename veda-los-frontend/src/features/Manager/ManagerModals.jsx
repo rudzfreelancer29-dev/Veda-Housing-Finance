@@ -36,6 +36,10 @@ export function RegisterCustomerModal({
               <input type="text" value={newCustForm.pan} onChange={e => setNewCustForm({ ...newCustForm, pan: e.target.value })} className="w-full mt-1 p-2 text-sm border rounded-xl" />
             </div>
             <div>
+              <label className="text-xs font-semibold text-slate-600">Aadhar Number</label>
+              <input type="text" value={newCustForm.aadhar} onChange={e => setNewCustForm({ ...newCustForm, aadhar: e.target.value })} className="w-full mt-1 p-2 text-sm border rounded-xl" />
+            </div>
+            <div>
               <label className="text-xs font-semibold text-slate-600">Loan Request (₹)</label>
               <input type="number" value={newCustForm.loanReq} onChange={e => setNewCustForm({ ...newCustForm, loanReq: e.target.value })} className="w-full mt-1 p-2 text-sm border rounded-xl" />
             </div>
