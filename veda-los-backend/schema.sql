@@ -122,3 +122,12 @@ CREATE TABLE IF NOT EXISTS documents (
 );
 
 CREATE INDEX IF NOT EXISTS idx_documents_customer ON documents (customer_id);
+
+ALTER TABLE payments
+ADD COLUMN IF NOT EXISTS gateway_order_id VARCHAR(120);
+
+ALTER TABLE payments
+ADD COLUMN IF NOT EXISTS gateway_payment_id VARCHAR(120);
+
+ALTER TABLE payments
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NOT NULL DEFAULT NOW();

@@ -7,8 +7,10 @@ const authRoutes = require("./routes/auth");
 const managerRoutes = require("./routes/managers");
 const customerRoutes = require("./routes/customers");
 const myCustomerRoutes = require("./routes/myCustomers");
+const myApplicationRoutes = require("./routes/myApplications");
 const documentRoutes = require("./routes/documents");
 const applicationRoutes = require("./routes/applications");
+const paymentRoutes = require("./routes/payments");
 const reportRoutes = require("./routes/reports");
 const auditLogRoutes = require("./routes/auditLogs");
 const notificationRoutes = require("./routes/notifications");
@@ -17,7 +19,15 @@ const app = express();
 
 // Only allow requests from the frontend's local URL (set in .env)
 app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }));
-app.use(express.json());
+
+// The `verify` callback stashes the raw request body on req.rawBody before
+// it's parsed into req.body. Cashfree's webhook signature is computed over
+// the exact raw bytes it sent — re-stringifying the parsed JSON later can
+// produce different bytes (key order, spacing) and silently break
+// verification, so the raw body is captured here once, globally.
+app.use(express.json({
+  verify: (req, res, buf) => { req.rawBody = buf.toString(); },
+}));
 
 // Serves uploaded documents (e.g. /uploads/171234-aadhaar.pdf) as static files.
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
@@ -41,8 +51,10 @@ app.use("/api/auth", authRoutes);
 app.use("/api/managers", managerRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/my", myCustomerRoutes);
+app.use("/api/my", myApplicationRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/applications", applicationRoutes);
+app.use("/api/payments", paymentRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/audit-logs", auditLogRoutes);
 app.use("/api/notifications", notificationRoutes);
