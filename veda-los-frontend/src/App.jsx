@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { ToastContainer } from "react-toastify";
 import Login from "./Authentication/login";
 import Register from "./Authentication/Register";
+import ResetPassword from "./Authentication/Reset-Password";
 import Admin from "./features/admin/admin";
 import Manager from "./features/Manager/Manager";
 
@@ -22,7 +23,9 @@ export default function App() {
   };
 
   const renderComponent = () => {
-    if (currentPath === "/register") {
+    const path = currentPath.toLowerCase();
+
+    if (path === "/register") {
       return (
         <Register
           onRegister={(data) => {
@@ -31,6 +34,10 @@ export default function App() {
           onNavigateLogin={() => navigateTo("/login")}
         />
       );
+    }
+
+    if (path === "/reset-password" || path.startsWith("/reset-password")) {
+      return <ResetPassword onNavigateLogin={() => navigateTo("/login")} />;
     }
 
     if (currentPath === "/admin") {

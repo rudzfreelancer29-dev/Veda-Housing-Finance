@@ -1,12 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     LayoutDashboard,
     Users,
     UserCheck,
     FileText,
     BarChart3,
-    History
+    History,
+    Lock,
+    Unlock,
+    Trash2
 } from "lucide-react";
+import { toast } from "react-toastify";
 
 // Import Generic Shared Components
 import Sidebar from "./components/Sidebar";
@@ -23,6 +27,7 @@ import AuditLogsTab from "./AuditLogsTab";
 // Import Modular Modal Components
 import ManagerModal from "./ManagerModal";
 import ManagerCustomersModal from "./ManagerCustomersModal";
+import apiService from "../../services/api-service";
 
 // Initial Mock Data
 const INITIAL_MANAGERS = [
@@ -75,6 +80,44 @@ export default function Admin() {
     const [customers, setCustomers] = useState(INITIAL_CUSTOMERS);
     const [applications, setApplications] = useState(INITIAL_APPLICATIONS);
 
+    // Fetch Managers from API
+    const fetchManagers = async () => {
+        try {
+            const response = await apiService.getManagers();
+            const rawData = response.data;
+            const dataArray = Array.isArray(rawData)
+                ? rawData
+                : (rawData?.data || rawData?.managers || []);
+
+            if (Array.isArray(dataArray) && dataArray.length > 0) {
+                const mapped = dataArray.map((m, index) => {
+                    const status = m.status
+                        ? m.status.toLowerCase()
+                        : (m.is_active === true || m.is_active === "true" || m.is_active === 1 ? "active" : "inactive");
+
+                    return {
+                        id: m.id || index + 1,
+                        name: m.name || m.username || `Manager ${m.id || index + 1}`,
+                        email: m.email || "",
+                        role: m.role || "Manager",
+                        status: status,
+                        is_active: m.is_active,
+                        created_at: m.created_at,
+                        applications: m.applications ?? 0,
+                        avatar: m.avatar || ""
+                    };
+                });
+                setManagers(mapped);
+            }
+        } catch (error) {
+            console.error("Failed to fetch managers from API:", error);
+        }
+    };
+
+    useEffect(() => {
+        fetchManagers();
+    }, []);
+
     // Search & Filters
     const [searchQuery, setSearchQuery] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
@@ -87,9 +130,20 @@ export default function Admin() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState("add"); // 'add' or 'edit'
     const [editingManager, setEditingManager] = useState(null);
+    const [modalLoading, setModalLoading] = useState(false);
+
+    // Status Update Confirmation Modal State
+    const [statusModal, setStatusModal] = useState({
+        isOpen: false,
+        managerId: null,
+        managerName: "",
+        currentStatus: "",
+        nextStatus: "",
+        loading: false
+    });
 
     // Forms state
-    const [managerForm, setManagerForm] = useState({ name: "", email: "", role: "Manager", status: "active", applications: 0 });
+    const [managerForm, setManagerForm] = useState({ name: "", email: "", password: "", status: "active", applications: 0 });
 
     // Notifications state
     const [notifications, setNotifications] = useState([
@@ -119,26 +173,59 @@ export default function Admin() {
     };
 
     // Manager Actions
-    const handleSaveManager = (e) => {
+    const handleSaveManager = async (e) => {
         e.preventDefault();
         if (!managerForm.name || !managerForm.email) {
-            alert("Name and Email are required");
+            toast.warn("Name and Email are required");
             return;
         }
 
         if (modalMode === "add") {
-            const newManager = {
-                id: managers.length + 1,
-                ...managerForm,
-                avatar: `https://images.unsplash.com/photo-${1500000000000 + Math.floor(Math.random() * 900000)}?auto=format&fit=crop&q=80&w=100`
-            };
-            setManagers([newManager, ...managers]);
-            addAuditLog("Admin", "Create", `Created manager account: ${newManager.name}`);
+            if (!managerForm.password) {
+                toast.warn("Password is required for new manager account");
+                return;
+            }
+            if (managerForm.password.length < 8) {
+                toast.warn("Password must be at least 8 characters long");
+                return;
+            }
+            setModalLoading(true);
+            try {
+                const payload = {
+                    name: managerForm.name.trim(),
+                    email: managerForm.email.trim(),
+                    password: managerForm.password
+                };
+                await apiService.createManagers(payload);
+                toast.success(`Manager account created for ${payload.name}!`);
+                addAuditLog("Admin", "Create", `Created manager account: ${payload.name}`);
+                await fetchManagers();
+                setIsModalOpen(false);
+            } catch (error) {
+                const errorMsg = error.response?.data?.message || "Failed to create manager account. Please try again.";
+                toast.error(errorMsg);
+            } finally {
+                setModalLoading(false);
+            }
         } else {
-            setManagers(managers.map(m => m.id === editingManager.id ? { ...m, ...managerForm } : m));
-            addAuditLog("Admin", "Update", `Updated manager account: ${managerForm.name}`);
+            setModalLoading(true);
+            try {
+                const payload = {
+                    name: managerForm.name.trim(),
+                    email: managerForm.email.trim()
+                };
+                await apiService.updateManager(payload, editingManager.id);
+                toast.success(`Manager account updated for ${payload.name}!`);
+                addAuditLog("Admin", "Update", `Updated manager account: ${payload.name}`);
+                await fetchManagers();
+                setIsModalOpen(false);
+            } catch (error) {
+                const errorMsg = error.response?.data?.message || "Failed to update manager account. Please try again.";
+                toast.error(errorMsg);
+            } finally {
+                setModalLoading(false);
+            }
         }
-        setIsModalOpen(false);
     };
 
     const handleEditManagerClick = (manager) => {
@@ -147,6 +234,7 @@ export default function Admin() {
         setManagerForm({
             name: manager.name,
             email: manager.email,
+            password: "",
             role: manager.role,
             status: manager.status,
             applications: manager.applications
@@ -154,18 +242,70 @@ export default function Admin() {
         setIsModalOpen(true);
     };
 
+    // Delete Confirmation Modal State
+    const [deleteModal, setDeleteModal] = useState({
+        isOpen: false,
+        managerId: null,
+        managerName: "",
+        loading: false
+    });
+
     const handleDeleteManager = (id, name) => {
-        if (window.confirm(`Are you sure you want to delete manager "${name}"?`)) {
-            setManagers(managers.filter(m => m.id !== id));
-            setSelectedManagers(selectedManagers.filter(item => item !== id));
-            addAuditLog("Admin", "Delete", `Deleted manager account: ${name}`);
+        setDeleteModal({
+            isOpen: true,
+            managerId: id,
+            managerName: name,
+            loading: false
+        });
+    };
+
+    const handleConfirmDeleteManager = async () => {
+        if (!deleteModal.managerId) return;
+        setDeleteModal((prev) => ({ ...prev, loading: true }));
+        try {
+            await apiService.deleteManager(deleteModal.managerId);
+            toast.success(`Manager ${deleteModal.managerName} deleted successfully`);
+            setSelectedManagers((prev) => prev.filter((item) => item !== deleteModal.managerId));
+            addAuditLog("Admin", "Delete", `Deleted manager account: ${deleteModal.managerName}`);
+            await fetchManagers();
+            setDeleteModal({ isOpen: false, managerId: null, managerName: "", loading: false });
+        } catch (error) {
+            const errorMsg = error.response?.data?.message || "Failed to delete manager";
+            toast.error(errorMsg);
+            setDeleteModal((prev) => ({ ...prev, loading: false }));
         }
     };
 
     const handleToggleManagerStatus = (id, currentStatus, name) => {
         const nextStatus = currentStatus === "active" ? "inactive" : "active";
-        setManagers(managers.map(m => m.id === id ? { ...m, status: nextStatus } : m));
-        addAuditLog("Admin", nextStatus === "active" ? "Action" : "Deactivate", `${nextStatus === "active" ? "Activated" : "Deactivated"} manager: ${name}`);
+        setStatusModal({
+            isOpen: true,
+            managerId: id,
+            managerName: name,
+            currentStatus: currentStatus,
+            nextStatus: nextStatus,
+            loading: false
+        });
+    };
+
+    const handleConfirmStatusChange = async () => {
+        if (!statusModal.managerId) return;
+        setStatusModal((prev) => ({ ...prev, loading: true }));
+        try {
+            const payload = {
+                is_active: statusModal.nextStatus === "active",
+                status: statusModal.nextStatus
+            };
+            await apiService.updateManagerStatus(payload, statusModal.managerId);
+            toast.success(`Manager ${statusModal.managerName} status updated to ${statusModal.nextStatus}!`);
+            addAuditLog("Admin", statusModal.nextStatus === "active" ? "Action" : "Deactivate", `${statusModal.nextStatus === "active" ? "Activated" : "Deactivated"} manager: ${statusModal.managerName}`);
+            await fetchManagers();
+            setStatusModal({ isOpen: false, managerId: null, managerName: "", currentStatus: "", nextStatus: "", loading: false });
+        } catch (error) {
+            const errorMsg = error.response?.data?.message || "Failed to update manager status. Please try again.";
+            toast.error(errorMsg);
+            setStatusModal((prev) => ({ ...prev, loading: false }));
+        }
     };
 
 
@@ -224,7 +364,7 @@ export default function Admin() {
         headerActionLabel = "Add Manager";
         headerOnActionClick = () => {
             setModalMode("add");
-            setManagerForm({ name: "", email: "", role: "Manager", status: "active", applications: 0 });
+            setManagerForm({ name: "", email: "", password: "", status: "active", applications: 0 });
             setIsModalOpen(true);
         };
     }
@@ -347,6 +487,7 @@ export default function Admin() {
                 modalMode={modalMode}
                 managerForm={managerForm}
                 setManagerForm={setManagerForm}
+                loading={modalLoading}
             />
 
             {/* Manager's Customers Portfolio Modal */}
@@ -358,6 +499,99 @@ export default function Admin() {
                     customers={customers}
                     onUpdateAppStatus={handleUpdateAppStatus}
                 />
+            )}
+
+            {/* Status Update Confirmation Modal */}
+            {statusModal.isOpen && (
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-150">
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-6 relative overflow-hidden">
+                        <div className="flex items-center gap-3.5 mb-4">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${statusModal.nextStatus === "active" ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"}`}>
+                                {statusModal.nextStatus === "active" ? <Unlock className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
+                            </div>
+                            <div>
+                                <h3 className="text-base font-bold text-slate-900">
+                                    Confirm Status Update
+                                </h3>
+                                <p className="text-xs text-slate-500">Manager Account Status</p>
+                            </div>
+                        </div>
+
+                        <p className="text-xs sm:text-sm text-slate-600 mb-6 leading-relaxed">
+                            Are you sure you want to change status for <strong className="text-slate-800 font-bold">{statusModal.managerName}</strong> to{" "}
+                            <span className={`font-bold uppercase ${statusModal.nextStatus === "active" ? "text-emerald-600" : "text-amber-600"}`}>
+                                {statusModal.nextStatus}
+                            </span>?
+                        </p>
+
+                        <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100">
+                            <button
+                                type="button"
+                                onClick={() => setStatusModal({ isOpen: false, managerId: null, managerName: "", currentStatus: "", nextStatus: "", loading: false })}
+                                className="py-2 px-4 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                disabled={statusModal.loading}
+                                onClick={handleConfirmStatusChange}
+                                className={`py-2 px-4 text-xs font-semibold text-white rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer ${statusModal.nextStatus === "active" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-amber-600 hover:bg-amber-700"}`}
+                            >
+                                {statusModal.loading ? (
+                                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                    <span>Confirm Update</span>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {deleteModal.isOpen && (
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-150">
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-md w-full p-6 relative overflow-hidden">
+                        <div className="flex items-center gap-3.5 mb-4">
+                            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-rose-50 text-rose-600">
+                                <Trash2 className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h3 className="text-base font-bold text-slate-900">
+                                    Confirm Delete Manager
+                                </h3>
+                                <p className="text-xs text-slate-500">Delete Manager Account</p>
+                            </div>
+                        </div>
+
+                        <p className="text-xs sm:text-sm text-slate-600 mb-6 leading-relaxed">
+                            Are you sure you want to delete manager <strong className="text-slate-800 font-bold">{deleteModal.managerName}</strong>? This action cannot be undone.
+                        </p>
+
+                        <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100">
+                            <button
+                                type="button"
+                                onClick={() => setDeleteModal({ isOpen: false, managerId: null, managerName: "", loading: false })}
+                                className="py-2 px-4 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                disabled={deleteModal.loading}
+                                onClick={handleConfirmDeleteManager}
+                                className="py-2 px-4 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer"
+                            >
+                                {deleteModal.loading ? (
+                                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                    <span>Delete Manager</span>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
