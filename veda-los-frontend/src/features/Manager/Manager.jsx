@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { LayoutDashboard, Users, FileText } from "lucide-react";
+import { toast } from "react-toastify";
+import apiService from "../../services/api-service";
 
 // Import Generic Components
 import Sidebar from "./components/Sidebar";
@@ -13,10 +15,24 @@ import LoanApplicationsTab from "./LoanApplicationsTab";
 // Import Modular Modals
 import {
   RegisterCustomerModal,
-  ManageDocumentsModal,
+  EditCustomerModal,
   SendNotificationModal,
   GeneratePaymentModal
 } from "./ManagerModals";
+import CustomerDocumentsModal from "./CustomerDocumentsModal";
+import CustomerDetailsModal from "./CustomerDetailsModal";
+
+const INITIAL_CUSTOMER_FORM = {
+  fullName: "",
+  mobileNumber: "",
+  email: "",
+  dateOfBirth: "",
+  panNumber: "",
+  aadhaarNumber: "",
+  employmentDetails: "",
+  monthlyIncome: "",
+  loanRequirementDetails: ""
+};
 
 // Initial Mock Data
 const INITIAL_CUSTOMERS = [
@@ -74,8 +90,9 @@ const INITIAL_APPLICATIONS = [
 
 export default function Manager({ onLogout }) {
   const [activeTab, setActiveTab] = useState("Dashboard");
-  const [customers, setCustomers] = useState(INITIAL_CUSTOMERS);
-  const [applications, setApplications] = useState(INITIAL_APPLICATIONS);
+  const [customers, setCustomers] = useState([]);
+  const [applications, setApplications] = useState([]);
+  const [loadingCustomers, setLoadingCustomers] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -84,15 +101,24 @@ export default function Manager({ onLogout }) {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
 
   // Form states
-  const [newCustForm, setNewCustForm] = useState({ name: "", mobile: "", email: "", pan: "", aadhaar: "", loanReq: "" });
+  const [newCustForm, setNewCustForm] = useState(INITIAL_CUSTOMER_FORM);
+  const [editCustForm, setEditCustForm] = useState(INITIAL_CUSTOMER_FORM);
+  const [editingCustomerId, setEditingCustomerId] = useState(null);
+  const [registerLoading, setRegisterLoading] = useState(false);
+  const [updateLoading, setUpdateLoading] = useState(false);
   const [notificationMsg, setNotificationMsg] = useState("");
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentType, setPaymentType] = useState("Processing Fee");
 
+  // Customer Full Details Modal State
+  const [detailCustomer, setDetailCustomer] = useState(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+
   // Notifications list
   const [notifications, setNotifications] = useState([
-    { id: 1, text: "Customer Rahul Sharma uploaded new documents", read: false },
-    { id: 2, text: "Payment request pending for App #APP-503", read: false }
+    { id: 1, text: "Customer uploaded new documents", read: false },
+    { id: 2, text: "Payment request pending", read: false }
   ]);
 
   // Sidebar navigation configuration
@@ -102,29 +128,254 @@ export default function Manager({ onLogout }) {
     { name: "Loan Applications", icon: FileText }
   ];
 
+  // Fetch Manager's Customers from API
+  const fetchCustomers = async () => {
+    setLoadingCustomers(true);
+    try {
+      const response = await apiService.getManagersCustomer();
+      const rawData = response.data;
+      const dataArray = Array.isArray(rawData) ? rawData : (rawData?.data || rawData?.customers || []);
+
+      if (Array.isArray(dataArray)) {
+        const mapped = dataArray.map((item, index) => {
+          let stage = "New Registered";
+          const statusLower = (item.application_status || "").toLowerCase().replace(/_/g, " ");
+          if (statusLower === "under review") stage = "Under Review";
+          else if (statusLower === "document upload") stage = "Document Upload";
+          else if (statusLower === "payment requested") stage = "Payment Requested";
+          else if (statusLower === "approved") stage = "Approved";
+          else if (statusLower === "rejected") stage = "Rejected";
+          else if (statusLower === "new registered" || statusLower === "new") stage = "New Registered";
+          else if (item.application_status) stage = item.application_status.charAt(0).toUpperCase() + item.application_status.slice(1);
+
+          const loanAmount = item.loan_requirement_details || (item.monthly_income && Number(item.monthly_income) > 0 ? Number(item.monthly_income) * 10 : "");
+
+          return {
+            id: item.reference_id || (item.id ? `CUST-${item.id}` : `CUST-${index + 1}`),
+            rawId: item.id,
+            referenceId: item.reference_id,
+            name: item.full_name || item.name || `Customer ${index + 1}`,
+            fullName: item.full_name || item.name || `Customer ${index + 1}`,
+            mobile: item.mobile_number || item.mobile || "-",
+            mobileNumber: item.mobile_number || item.mobile || "-",
+            email: item.email || "",
+            pan: item.pan_number || "",
+            aadhaar: item.aadhaar_number || "",
+            dob: item.date_of_birth || "",
+            employment: item.employment_details || "",
+            income: item.monthly_income ? Number(item.monthly_income) : "",
+            stage: stage,
+            applicationId: item.application_id,
+            loanReq: loanAmount,
+            loanRequirementDetails: item.loan_requirement_details || "",
+            documents: [
+              { name: "PAN Card", status: item.pan_number ? "Verified" : "Pending" },
+              { name: "Aadhaar Card", status: item.aadhaar_number ? "Verified" : "Pending" }
+            ],
+            createdAt: item.created_at
+          };
+        });
+
+        setCustomers(mapped);
+
+        const mappedApps = mapped.map((c, idx) => ({
+          id: c.applicationId ? `APP-${c.applicationId}` : `APP-${500 + idx + 1}`,
+          customerId: c.id,
+          customerName: c.name,
+          amount: c.loanReq,
+          stage: c.stage,
+          date: c.createdAt ? c.createdAt.split("T")[0] : new Date().toISOString().split("T")[0]
+        }));
+        setApplications(mappedApps);
+      }
+    } catch (error) {
+      console.error("Failed to fetch manager customers:", error);
+    } finally {
+      setLoadingCustomers(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
+
   // Handler functions
-  const handleRegisterCustomer = (e) => {
+  const handleRegisterCustomer = async (e) => {
     e.preventDefault();
-    if (!newCustForm.name || !newCustForm.mobile) return;
-    const newId = `CUST-${100 + customers.length + 1}`;
-    const newCust = {
-      id: newId,
-      name: newCustForm.name,
-      mobile: newCustForm.mobile,
-      email: newCustForm.email,
-      pan: newCustForm.pan,
-      aadhaar: newCustForm.aadhaar,
-      stage: "New Registered",
-      documents: [{ name: "PAN Card", status: "Pending" }, { name: "Aadhaar Card", status: "Pending" }],
-      loanReq: Number(newCustForm.loanReq) || 1000000
-    };
-    setCustomers([newCust, ...customers]);
-    setApplications([
-      { id: `APP-${500 + applications.length + 1}`, customerId: newId, customerName: newCustForm.name, amount: newCust.loanReq, stage: "New Registered", date: new Date().toISOString().split("T")[0] },
-      ...applications
-    ]);
-    setNewCustForm({ name: "", mobile: "", email: "", pan: "", aadhaar: "", loanReq: "" });
-    setActiveModal(null);
+    if (!newCustForm.fullName?.trim()) {
+      toast.warn("Full Name is mandatory");
+      return;
+    }
+    if (!newCustForm.mobileNumber?.trim()) {
+      toast.warn("Mobile Number is mandatory");
+      return;
+    }
+
+    setRegisterLoading(true);
+    try {
+      const payload = {
+        fullName: newCustForm.fullName.trim(),
+        mobileNumber: newCustForm.mobileNumber.trim(),
+        email: newCustForm.email ? newCustForm.email.trim() : "",
+        dateOfBirth: newCustForm.dateOfBirth || "",
+        panNumber: newCustForm.panNumber ? newCustForm.panNumber.trim().toUpperCase() : "",
+        aadhaarNumber: newCustForm.aadhaarNumber ? newCustForm.aadhaarNumber.trim() : "",
+        employmentDetails: newCustForm.employmentDetails ? newCustForm.employmentDetails.trim() : "",
+        monthlyIncome: newCustForm.monthlyIncome ? Number(newCustForm.monthlyIncome) : 0,
+        loanRequirementDetails: newCustForm.loanRequirementDetails ? newCustForm.loanRequirementDetails.trim() : ""
+      };
+
+      const response = await apiService.registerCustomer(payload);
+      toast.success("Customer registered successfully!");
+
+      const resData = response?.data?.customer || response?.data?.data || response?.data;
+      const newId = resData?.id || resData?.customerId || `CUST-${100 + customers.length + 1}`;
+
+      // If monthlyIncome and loanRequirementDetails aren't filled, leave loanReq empty
+      let loanReqValue = "";
+      if (resData?.loanReq || resData?.loanRequested || resData?.loanAmount) {
+        loanReqValue = resData.loanReq || resData.loanRequested || resData.loanAmount;
+      } else if (newCustForm.monthlyIncome) {
+        loanReqValue = Number(newCustForm.monthlyIncome) * 10;
+      } else if (newCustForm.loanRequirementDetails?.trim()) {
+        loanReqValue = newCustForm.loanRequirementDetails.trim();
+      }
+
+      const newCust = {
+        id: newId,
+        name: payload.fullName,
+        fullName: payload.fullName,
+        mobile: payload.mobileNumber,
+        mobileNumber: payload.mobileNumber,
+        email: payload.email,
+        pan: payload.panNumber,
+        aadhaar: payload.aadhaarNumber,
+        dob: payload.dateOfBirth,
+        employment: payload.employmentDetails,
+        income: newCustForm.monthlyIncome ? Number(newCustForm.monthlyIncome) : "",
+        stage: resData?.stage || resData?.status || "New Registered",
+        documents: [{ name: "PAN Card", status: "Pending" }, { name: "Aadhaar Card", status: "Pending" }],
+        loanReq: loanReqValue,
+        loanRequirementDetails: payload.loanRequirementDetails
+      };
+
+      setCustomers(prev => [newCust, ...prev]);
+      setApplications(prev => [
+        {
+          id: `APP-${500 + prev.length + 1}`,
+          customerId: newId,
+          customerName: newCust.name,
+          amount: newCust.loanReq,
+          stage: "New Registered",
+          date: new Date().toISOString().split("T")[0]
+        },
+        ...prev
+      ]);
+
+      setNewCustForm(INITIAL_CUSTOMER_FORM);
+      setActiveModal(null);
+      await fetchCustomers();
+    } catch (error) {
+      console.error("Error registering customer:", error);
+      const errMsg = error?.response?.data?.message || error?.response?.data?.error || "Failed to register customer";
+      toast.error(errMsg);
+    } finally {
+      setRegisterLoading(false);
+    }
+  };
+
+  const handleOpenEditModal = (cust) => {
+    setSelectedCustomer(cust);
+    setEditingCustomerId(cust.rawId || cust.id);
+
+    let formattedDob = cust.dob || cust.dateOfBirth || cust.date_of_birth || "";
+    if (formattedDob && typeof formattedDob === "string" && formattedDob.includes("T")) {
+      formattedDob = formattedDob.split("T")[0];
+    }
+
+    setEditCustForm({
+      fullName: cust.fullName || cust.name || "",
+      mobileNumber: cust.mobileNumber || cust.mobile || "",
+      email: cust.email || "",
+      dateOfBirth: formattedDob,
+      panNumber: cust.pan || cust.panNumber || cust.pan_number || "",
+      aadhaarNumber: cust.aadhaar || cust.aadhaarNumber || cust.aadhaar_number || "",
+      employmentDetails: cust.employment || cust.employmentDetails || cust.employment_details || "",
+      monthlyIncome: cust.income || cust.monthlyIncome || cust.monthly_income || "",
+      loanRequirementDetails: cust.loanRequirementDetails || cust.loan_requirement_details || ""
+    });
+    setActiveModal("editCustomer");
+  };
+
+  const handleUpdateCustomer = async (e) => {
+    e.preventDefault();
+    if (!editCustForm.fullName?.trim()) {
+      toast.warn("Full Name is mandatory");
+      return;
+    }
+    if (!editCustForm.mobileNumber?.trim()) {
+      toast.warn("Mobile Number is mandatory");
+      return;
+    }
+
+    setUpdateLoading(true);
+    try {
+      const payload = {
+        fullName: editCustForm.fullName.trim(),
+        mobileNumber: editCustForm.mobileNumber.trim(),
+        email: editCustForm.email ? editCustForm.email.trim() : "",
+        dateOfBirth: editCustForm.dateOfBirth || "",
+        panNumber: editCustForm.panNumber ? editCustForm.panNumber.trim().toUpperCase() : "",
+        aadhaarNumber: editCustForm.aadhaarNumber ? editCustForm.aadhaarNumber.trim() : "",
+        employmentDetails: editCustForm.employmentDetails ? editCustForm.employmentDetails.trim() : "",
+        monthlyIncome: editCustForm.monthlyIncome ? Number(editCustForm.monthlyIncome) : 0,
+        loanRequirementDetails: editCustForm.loanRequirementDetails ? editCustForm.loanRequirementDetails.trim() : ""
+      };
+
+      const targetId = editingCustomerId || selectedCustomer?.rawId || selectedCustomer?.id;
+      await apiService.updateCustomer(payload, targetId);
+      toast.success("Customer updated successfully!");
+      setActiveModal(null);
+      await fetchCustomers();
+    } catch (error) {
+      console.error("Error updating customer:", error);
+      const errMsg = error?.response?.data?.message || error?.response?.data?.error || "Failed to update customer";
+      toast.error(errMsg);
+    } finally {
+      setUpdateLoading(false);
+    }
+  };
+
+  const handleViewCustomerDetails = async (cust) => {
+    setIsDetailModalOpen(true);
+    setDetailLoading(true);
+    setDetailCustomer(null);
+    try {
+      const targetId = cust.rawId || cust.id;
+      const response = await apiService.GetManagersCustomerById(targetId);
+      const data = response.data?.data || response.data?.customer || response.data;
+      setDetailCustomer(data);
+    } catch (error) {
+      console.error("Failed to fetch manager customer details:", error);
+      setDetailCustomer({
+        id: cust.rawId || cust.id,
+        reference_id: cust.referenceId || cust.id,
+        full_name: cust.name || cust.fullName,
+        mobile_number: cust.mobile || cust.mobileNumber,
+        email: cust.email,
+        pan_number: cust.pan,
+        aadhaar_number: cust.aadhaar,
+        date_of_birth: cust.dob,
+        employment_details: cust.employment,
+        monthly_income: cust.income,
+        loan_requirement_details: cust.loanReq,
+        created_at: cust.createdAt,
+        stage: cust.stage,
+        applications: []
+      });
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
   const handleStageChange = (custId, newStage) => {
@@ -170,8 +421,6 @@ export default function Manager({ onLogout }) {
         {/* Navbar Header */}
         <Navbar
           activeTab={activeTab}
-          actionLabel={activeTab === "Customer Onboarding" ? "+ Register Customer" : ""}
-          onActionClick={() => setActiveModal("register")}
           notifications={notifications}
           onMarkNotificationsRead={() => setNotifications(notifications.map(n => ({ ...n, read: true })))}
           user={{ name: "David Fhone", role: "Loan Operations Manager", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100" }}
@@ -193,12 +442,16 @@ export default function Manager({ onLogout }) {
           {activeTab === "Customer Onboarding" && (
             <CustomerOnboardingTab
               customers={customers}
+              loading={loadingCustomers}
+              onRefresh={fetchCustomers}
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
               onStageChange={handleStageChange}
               onSelectCustomer={setSelectedCustomer}
               onOpenModal={setActiveModal}
+              onOpenEditModal={handleOpenEditModal}
               onSetPaymentAmount={setPaymentAmount}
+              onCustomerClick={handleViewCustomerDetails}
             />
           )}
 
@@ -220,14 +473,33 @@ export default function Manager({ onLogout }) {
           newCustForm={newCustForm}
           setNewCustForm={setNewCustForm}
           onSubmit={handleRegisterCustomer}
-          onClose={() => setActiveModal(null)}
+          onClose={() => {
+            setActiveModal(null);
+            setNewCustForm(INITIAL_CUSTOMER_FORM);
+          }}
+          loading={registerLoading}
+        />
+      )}
+
+      {activeModal === "editCustomer" && (
+        <EditCustomerModal
+          editCustForm={editCustForm}
+          setEditCustForm={setEditCustForm}
+          onSubmit={handleUpdateCustomer}
+          onClose={() => {
+            setActiveModal(null);
+            setEditCustForm(INITIAL_CUSTOMER_FORM);
+          }}
+          loading={updateLoading}
+          customerId={selectedCustomer?.id || selectedCustomer?.referenceId || editingCustomerId}
         />
       )}
 
       {activeModal === "docUpload" && (
-        <ManageDocumentsModal
+        <CustomerDocumentsModal
           selectedCustomer={selectedCustomer}
           onClose={() => setActiveModal(null)}
+          onUploadSuccess={fetchCustomers}
         />
       )}
 
@@ -252,6 +524,31 @@ export default function Manager({ onLogout }) {
           onClose={() => setActiveModal(null)}
         />
       )}
+
+      {/* Customer Full Details Modal */}
+      <CustomerDetailsModal
+        isOpen={isDetailModalOpen}
+        onClose={() => {
+          setIsDetailModalOpen(false);
+          setDetailCustomer(null);
+        }}
+        customer={detailCustomer}
+        loading={detailLoading}
+        onOpenEdit={(cust) => {
+          setIsDetailModalOpen(false);
+          handleOpenEditModal(cust);
+        }}
+        onSeeDocs={(cust) => {
+          setIsDetailModalOpen(false);
+          setSelectedCustomer(cust);
+          setActiveModal("docUpload");
+        }}
+        onManageDocs={(cust) => {
+          setIsDetailModalOpen(false);
+          setSelectedCustomer(cust);
+          setActiveModal("docUpload");
+        }}
+      />
     </div>
   );
 }

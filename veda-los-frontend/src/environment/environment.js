@@ -7,13 +7,27 @@ export const environment = {
     ForgotPassword: 'auth/forgot-password',
     ResetPassword: 'auth/reset-password',
 
-    //Manager
+    //Admin - Manager
     GetManagers: 'managers/',
     CreateManagers: 'managers/',
     UpdateManager: 'managers/',
     UpdateManagerStatus: 'managers/',
     DeleteManager: 'managers/',
+    GetAllCustomers: 'customers/',
+    GetCustomerById: 'customers/',
+    DeleteCustomer: 'customers/',
     
+
+    //Manager - customer
+    RegisterCustomer: 'customers',
+    GetManagersCustomer: 'my/customers',
+    UpdateCustomer: 'customers/',
+    GetManagersCustomerById: 'customers/',
+
+    //Document management
+    UploadCustomerDocument: 'documents/upload/',
+    GetCustomerDocuments: 'documents/',
+    DeleteDocuments: 'documents/',
 
 
 

@@ -70,8 +70,10 @@ export default function DashboardTab({
               <tbody className="divide-y divide-slate-100">
                 {customers.slice(0, 4).map(c => (
                   <tr key={c.id} className="hover:bg-slate-50/50">
-                    <td className="p-3 font-medium text-slate-800">{c.name} <span className="text-xs text-slate-400 block">{c.id}</span></td>
-                    <td className="p-3 font-semibold">₹{c.loanReq.toLocaleString()}</td>
+                    <td className="p-3 font-medium text-slate-800">{c.name || c.fullName} <span className="text-xs text-slate-400 block">{c.id}</span></td>
+                    <td className="p-3 font-semibold">
+                      {c.loanReq ? (typeof c.loanReq === "number" || !isNaN(Number(c.loanReq)) ? `₹${Number(c.loanReq).toLocaleString()}` : c.loanReq) : ""}
+                    </td>
                     <td className="p-3">
                       <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-50 text-blue-700">{c.stage}</span>
                     </td>

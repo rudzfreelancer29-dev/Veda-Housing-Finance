@@ -27,7 +27,9 @@ export default function LoanApplicationsTab({
               <tr key={app.id} className="hover:bg-slate-50/50">
                 <td className="p-3 font-medium text-slate-800">{app.id}</td>
                 <td className="p-3 font-semibold text-slate-900">{app.customerName}</td>
-                <td className="p-3 font-semibold">₹{app.amount.toLocaleString()}</td>
+                <td className="p-3 font-semibold">
+                  {app.amount ? (typeof app.amount === "number" || !isNaN(Number(app.amount)) ? `₹${Number(app.amount).toLocaleString()}` : app.amount) : ""}
+                </td>
                 <td className="p-3 text-xs text-slate-500">{app.date}</td>
                 <td className="p-3">
                   <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-50 text-blue-700">{app.stage}</span>

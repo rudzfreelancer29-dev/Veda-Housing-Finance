@@ -1,96 +1,188 @@
-import React from "react";
-import { X, Upload, Send, CreditCard, FileCheck } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  X,
+  Upload,
+  Send,
+  CreditCard,
+  FileCheck,
+  FileText,
+  CheckCircle2,
+  AlertCircle,
+  Trash2,
+  Paperclip,
+  Eye,
+  Download,
+  ExternalLink,
+  Image as ImageIcon,
+  RefreshCw,
+  Plus,
+  ZoomIn
+} from "lucide-react";
+import { toast } from "react-toastify";
+import apiService from "../../services/api-service";
+import { environment } from "../../environment/environment";
 
 // MODAL 1: REGISTER CUSTOMER
 export function RegisterCustomerModal({
   newCustForm,
   setNewCustForm,
   onSubmit,
-  onClose
+  onClose,
+  loading = false
 }) {
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
+      <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between border-b pb-3 border-slate-100">
-          <h3 className="font-bold text-slate-800 text-lg">Register New Customer</h3>
-          <button onClick={onClose}><X className="w-5 h-5 text-slate-400 hover:text-slate-600" /></button>
-        </div>
-        <form onSubmit={onSubmit} className="space-y-3">
           <div>
-            <label className="text-xs font-semibold text-slate-600">Full Name</label>
-            <input required type="text" value={newCustForm.name} onChange={e => setNewCustForm({ ...newCustForm, name: e.target.value })} className="w-full mt-1 p-2 text-sm border rounded-xl" />
+            <h3 className="font-bold text-slate-800 text-lg">Register New Customer</h3>
+            <p className="text-xs text-slate-500">Fill in the details below to register a customer</p>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-xs font-semibold text-slate-600">Mobile</label>
-              <input required type="text" value={newCustForm.mobile} onChange={e => setNewCustForm({ ...newCustForm, mobile: e.target.value })} className="w-full mt-1 p-2 text-sm border rounded-xl" />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-600">Email</label>
-              <input type="email" value={newCustForm.email} onChange={e => setNewCustForm({ ...newCustForm, email: e.target.value })} className="w-full mt-1 p-2 text-sm border rounded-xl" />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-xs font-semibold text-slate-600">PAN Number</label>
-              <input type="text" value={newCustForm.pan} onChange={e => setNewCustForm({ ...newCustForm, pan: e.target.value })} className="w-full mt-1 p-2 text-sm border rounded-xl" />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-600">Aadhar Number</label>
-              <input type="text" value={newCustForm.aadhar} onChange={e => setNewCustForm({ ...newCustForm, aadhar: e.target.value })} className="w-full mt-1 p-2 text-sm border rounded-xl" />
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-slate-600">Loan Request (₹)</label>
-              <input type="number" value={newCustForm.loanReq} onChange={e => setNewCustForm({ ...newCustForm, loanReq: e.target.value })} className="w-full mt-1 p-2 text-sm border rounded-xl" />
-            </div>
-          </div>
-          <button type="submit" className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl mt-2 cursor-pointer">
-            Save & Register Customer
+          <button onClick={onClose} disabled={loading} className="text-slate-400 hover:text-slate-600 disabled:opacity-50">
+            <X className="w-5 h-5" />
           </button>
+        </div>
+        <form onSubmit={onSubmit} className="space-y-3.5">
+          {/* Mandatory Fields */}
+          <div>
+            <label className="text-xs font-semibold text-slate-700">
+              Full Name <span className="text-rose-500">*</span>
+            </label>
+            <input
+              required
+              type="text"
+              placeholder="e.g. Kavita Desai"
+              value={newCustForm.fullName}
+              onChange={e => setNewCustForm({ ...newCustForm, fullName: e.target.value })}
+              className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-slate-700">
+                Mobile Number <span className="text-rose-500">*</span>
+              </label>
+              <input
+                required
+                type="tel"
+                placeholder="e.g. 9998887766"
+                value={newCustForm.mobileNumber}
+                onChange={e => setNewCustForm({ ...newCustForm, mobileNumber: e.target.value })}
+                className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-700">Email</label>
+              <input
+                type="email"
+                placeholder="e.g. kavita@example.com"
+                value={newCustForm.email}
+                onChange={e => setNewCustForm({ ...newCustForm, email: e.target.value })}
+                className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-slate-700">Date of Birth</label>
+              <input
+                type="date"
+                value={newCustForm.dateOfBirth}
+                onChange={e => setNewCustForm({ ...newCustForm, dateOfBirth: e.target.value })}
+                className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500 text-slate-700"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-700">Employment Details</label>
+              <input
+                type="text"
+                placeholder="e.g. Software Engineer"
+                value={newCustForm.employmentDetails}
+                onChange={e => setNewCustForm({ ...newCustForm, employmentDetails: e.target.value })}
+                className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-slate-700">PAN Number</label>
+              <input
+                type="text"
+                placeholder="e.g. ABCDE1234F"
+                value={newCustForm.panNumber}
+                onChange={e => setNewCustForm({ ...newCustForm, panNumber: e.target.value.toUpperCase() })}
+                className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500 uppercase"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-700">Aadhaar Number</label>
+              <input
+                type="text"
+                placeholder="e.g. 123412341234"
+                value={newCustForm.aadhaarNumber}
+                onChange={e => setNewCustForm({ ...newCustForm, aadhaarNumber: e.target.value })}
+                className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-slate-700">Monthly Income (₹)</label>
+              <input
+                type="number"
+                placeholder="e.g. 55000"
+                value={newCustForm.monthlyIncome}
+                onChange={e => setNewCustForm({ ...newCustForm, monthlyIncome: e.target.value })}
+                className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-700">Loan Requirement Details</label>
+              <input
+                type="text"
+                placeholder="e.g. Personal loan for home renovation"
+                value={newCustForm.loanRequirementDetails}
+                onChange={e => setNewCustForm({ ...newCustForm, loanRequirementDetails: e.target.value })}
+                className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                  <span>Registering...</span>
+                </>
+              ) : (
+                "Save & Register Customer"
+              )}
+            </button>
+          </div>
         </form>
       </div>
     </div>
   );
 }
-
-// MODAL 2: MANAGE DOCUMENTS
-export function ManageDocumentsModal({
-  selectedCustomer,
-  onClose
-}) {
-  if (!selectedCustomer) return null;
-  return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
-        <div className="flex items-center justify-between border-b pb-3 border-slate-100">
-          <div>
-            <h3 className="font-bold text-slate-800">Manage Customer Documents</h3>
-            <p className="text-xs text-slate-400">{selectedCustomer.name} ({selectedCustomer.id})</p>
-          </div>
-          <button onClick={onClose}><X className="w-5 h-5 text-slate-400" /></button>
-        </div>
-        <div className="space-y-3">
-          {selectedCustomer.documents?.map((doc, idx) => (
-            <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl text-xs">
-              <div className="flex items-center gap-2">
-                <FileCheck className="w-4 h-4 text-blue-600" />
-                <span className="font-semibold text-slate-700">{doc.name}</span>
-              </div>
-              <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${doc.status === "Verified" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                {doc.status}
-              </span>
-            </div>
-          ))}
-          <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 text-center cursor-pointer hover:border-blue-500 transition-all">
-            <Upload className="w-6 h-6 text-slate-400 mx-auto mb-1" />
-            <p className="text-xs text-slate-600 font-medium">Click to Upload New Document</p>
-            <p className="text-[10px] text-slate-400">PDF, JPG, PNG up to 10MB</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+// RE-EXPORT DOCUMENT MANAGEMENT MODAL (Extracted to separate component)
+export { default as CustomerDocumentsModal, ManageDocumentsModal, SeeDocumentsModal } from "./CustomerDocumentsModal";
 
 // MODAL 3: SEND NOTIFICATION
 export function SendNotificationModal({
@@ -165,6 +257,167 @@ export function GeneratePaymentModal({
           <button type="submit" className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer">
             <CreditCard className="w-4 h-4" /> Issue Payment Request
           </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// MODAL 5: EDIT CUSTOMER
+export function EditCustomerModal({
+  editCustForm,
+  setEditCustForm,
+  onSubmit,
+  onClose,
+  loading = false,
+  customerId = ""
+}) {
+  return (
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between border-b pb-3 border-slate-100">
+          <div>
+            <h3 className="font-bold text-slate-800 text-lg">Update Customer</h3>
+            <p className="text-xs text-slate-500">Edit customer details {customerId ? `(${customerId})` : ""}</p>
+          </div>
+          <button onClick={onClose} disabled={loading} className="text-slate-400 hover:text-slate-600 disabled:opacity-50 cursor-pointer">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <form onSubmit={onSubmit} className="space-y-3.5">
+          {/* Mandatory Fields */}
+          <div>
+            <label className="text-xs font-semibold text-slate-700">
+              Full Name <span className="text-rose-500">*</span>
+            </label>
+            <input
+              required
+              type="text"
+              placeholder="e.g. Kavita Desai"
+              value={editCustForm.fullName}
+              onChange={e => setEditCustForm({ ...editCustForm, fullName: e.target.value })}
+              className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-slate-700">
+                Mobile Number <span className="text-rose-500">*</span>
+              </label>
+              <input
+                required
+                type="tel"
+                placeholder="e.g. 9998887766"
+                value={editCustForm.mobileNumber}
+                onChange={e => setEditCustForm({ ...editCustForm, mobileNumber: e.target.value })}
+                className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-700">Email</label>
+              <input
+                type="email"
+                placeholder="e.g. kavita@example.com"
+                value={editCustForm.email}
+                onChange={e => setEditCustForm({ ...editCustForm, email: e.target.value })}
+                className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-slate-700">Date of Birth</label>
+              <input
+                type="date"
+                value={editCustForm.dateOfBirth}
+                onChange={e => setEditCustForm({ ...editCustForm, dateOfBirth: e.target.value })}
+                className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500 text-slate-700"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-700">Employment Details</label>
+              <input
+                type="text"
+                placeholder="e.g. Software Engineer"
+                value={editCustForm.employmentDetails}
+                onChange={e => setEditCustForm({ ...editCustForm, employmentDetails: e.target.value })}
+                className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-slate-700">PAN Number</label>
+              <input
+                type="text"
+                placeholder="e.g. ABCDE1234F"
+                value={editCustForm.panNumber}
+                onChange={e => setEditCustForm({ ...editCustForm, panNumber: e.target.value.toUpperCase() })}
+                className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500 uppercase"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-700">Aadhaar Number</label>
+              <input
+                type="text"
+                placeholder="e.g. 123412341234"
+                value={editCustForm.aadhaarNumber}
+                onChange={e => setEditCustForm({ ...editCustForm, aadhaarNumber: e.target.value })}
+                className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-slate-700">Monthly Income (₹)</label>
+              <input
+                type="number"
+                placeholder="e.g. 55000"
+                value={editCustForm.monthlyIncome}
+                onChange={e => setEditCustForm({ ...editCustForm, monthlyIncome: e.target.value })}
+                className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-700">Loan Requirement Details</label>
+              <input
+                type="text"
+                placeholder="e.g. Personal loan for home renovation"
+                value={editCustForm.loanRequirementDetails}
+                onChange={e => setEditCustForm({ ...editCustForm, loanRequirementDetails: e.target.value })}
+                className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                  <span>Updating...</span>
+                </>
+              ) : (
+                "Update Customer"
+              )}
+            </button>
+          </div>
         </form>
       </div>
     </div>
