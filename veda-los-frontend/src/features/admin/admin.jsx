@@ -77,7 +77,9 @@ export default function Admin() {
     const [activeTab, setActiveTab] = useState("Dashboard");
     const [managers, setManagers] = useState(INITIAL_MANAGERS);
     const [auditLogs, setAuditLogs] = useState(INITIAL_AUDIT_LOGS);
-    const [customers, setCustomers] = useState(INITIAL_CUSTOMERS);
+    const [customers, setCustomers] = useState([]);
+    const [loadingCustomers, setLoadingCustomers] = useState(false);
+    const [customerSearchQuery, setCustomerSearchQuery] = useState("");
     const [applications, setApplications] = useState(INITIAL_APPLICATIONS);
 
     // Fetch Managers from API
@@ -114,9 +116,82 @@ export default function Admin() {
         }
     };
 
+    // Fetch All Customers from API (Super Admin)
+    const fetchCustomers = async (search = "") => {
+        setLoadingCustomers(true);
+        try {
+            const response = await apiService.GetAllCustomers(search ? search.trim() : "");
+            const rawData = response.data;
+            const dataArray = Array.isArray(rawData)
+                ? rawData
+                : (rawData?.data || rawData?.customers || []);
+
+            if (Array.isArray(dataArray)) {
+                const mapped = dataArray.map((item, index) => {
+                    let status = "Under Review";
+                    if (item.application_status) {
+                        const s = item.application_status.toLowerCase().replace(/_/g, " ");
+                        status = s.replace(/\b\w/g, l => l.toUpperCase());
+                    } else if (item.status) {
+                        status = item.status;
+                    }
+
+                    const incomeVal = item.monthly_income && !isNaN(Number(item.monthly_income))
+                        ? Number(item.monthly_income)
+                        : (item.income || 0);
+
+                    const loanReqVal = item.loan_requirement_details || (incomeVal > 0 ? incomeVal * 10 : "");
+
+                    return {
+                        id: item.reference_id || (item.id ? `CUST-${item.id}` : `CUST-${index + 1}`),
+                        rawId: item.id,
+                        referenceId: item.reference_id,
+                        name: item.full_name || item.name || `Customer ${index + 1}`,
+                        fullName: item.full_name || item.name || "",
+                        mobile: item.mobile_number || item.mobile || "-",
+                        mobileNumber: item.mobile_number || item.mobile || "-",
+                        email: item.email || "-",
+                        dob: item.date_of_birth ? (typeof item.date_of_birth === "string" && item.date_of_birth.includes("T") ? item.date_of_birth.split("T")[0] : item.date_of_birth) : "-",
+                        pan: item.pan_number || item.pan || "-",
+                        aadhaar: item.aadhaar_number || item.aadhaar || "-",
+                        employment: item.employment_details || item.employment || "-",
+                        income: incomeVal,
+                        loanReq: loanReqVal,
+                        loanRequirementDetails: item.loan_requirement_details || "",
+                        status: status,
+                        manager: item.registered_by_name || item.manager || "Unassigned",
+                        registeredByName: item.registered_by_name || "",
+                        createdBy: item.created_by,
+                        createdAt: item.created_at,
+                        applicationId: item.application_id,
+                        documents: [
+                            { name: "Aadhaar Card", type: "aadhaar", status: item.aadhaar_number ? "Verified" : "Pending", verified: !!item.aadhaar_number },
+                            { name: "PAN Card", type: "pan", status: item.pan_number ? "Verified" : "Pending", verified: !!item.pan_number },
+                            { name: "Income Proof / Salary Slip", type: "income", status: incomeVal > 0 ? "Verified" : "Pending", verified: incomeVal > 0 }
+                        ]
+                    };
+                });
+                setCustomers(mapped);
+            }
+        } catch (error) {
+            console.error("Failed to fetch customers from API:", error);
+        } finally {
+            setLoadingCustomers(false);
+        }
+    };
+
     useEffect(() => {
         fetchManagers();
+        fetchCustomers();
     }, []);
+
+    // Debounce search query to query the GetAllCustomers API
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            fetchCustomers(customerSearchQuery);
+        }, 350);
+        return () => clearTimeout(timer);
+    }, [customerSearchQuery]);
 
     // Search & Filters
     const [searchQuery, setSearchQuery] = useState("");
@@ -449,8 +524,10 @@ export default function Admin() {
                     {activeTab === "Customers" && (
                         <CustomersTab
                             customers={customers}
-                            searchQuery={searchQuery}
-                            setSearchQuery={setSearchQuery}
+                            loading={loadingCustomers}
+                            onRefresh={() => fetchCustomers(customerSearchQuery)}
+                            searchQuery={customerSearchQuery}
+                            setSearchQuery={setCustomerSearchQuery}
                             applications={applications}
                             onUpdateAppStatus={handleUpdateAppStatus}
                         />
