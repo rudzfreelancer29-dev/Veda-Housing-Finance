@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { LayoutDashboard, Users, FileText } from "lucide-react";
 import { toast } from "react-toastify";
+import { load } from "@cashfreepayments/cashfree-js";
 import apiService from "../../services/api-service";
 
 // Import Generic Components
@@ -21,6 +22,7 @@ import {
 } from "./ManagerModals";
 import CustomerDocumentsModal from "./CustomerDocumentsModal";
 import CustomerDetailsModal from "./CustomerDetailsModal";
+import PaymentHistoryModal from "./PaymentHistoryModal";
 
 const INITIAL_CUSTOMER_FORM = {
   fullName: "",
@@ -106,14 +108,20 @@ export default function Manager({ onLogout }) {
   const [editingCustomerId, setEditingCustomerId] = useState(null);
   const [registerLoading, setRegisterLoading] = useState(false);
   const [updateLoading, setUpdateLoading] = useState(false);
-  const [notificationMsg, setNotificationMsg] = useState("");
   const [paymentAmount, setPaymentAmount] = useState("");
-  const [paymentType, setPaymentType] = useState("Processing Fee");
+  const [paymentType, setPaymentType] = useState("processing_fee");
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   // Customer Full Details Modal State
   const [detailCustomer, setDetailCustomer] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
+
+  // Payment History Modal State
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [paymentHistoryCustomer, setPaymentHistoryCustomer] = useState(null);
+  const [paymentHistoryList, setPaymentHistoryList] = useState([]);
+  const [paymentHistoryLoading, setPaymentHistoryLoading] = useState(false);
 
   // Notifications list
   const [notifications, setNotifications] = useState([
@@ -347,34 +355,25 @@ export default function Manager({ onLogout }) {
   };
 
   const handleViewCustomerDetails = async (cust) => {
-    setIsDetailModalOpen(true);
-    setDetailLoading(true);
-    setDetailCustomer(null);
+    setIsPaymentModalOpen(true);
+    setPaymentHistoryLoading(true);
+    setPaymentHistoryCustomer(cust);
+    setPaymentHistoryList([]);
     try {
-      const targetId = cust.rawId || cust.id;
-      const response = await apiService.GetManagersCustomerById(targetId);
-      const data = response.data?.data || response.data?.customer || response.data;
-      setDetailCustomer(data);
+      const targetId = cust.rawId || (typeof cust.id === "string" ? cust.id.replace(/^CUST-/, "") : cust.id);
+      const response = await apiService.GetPaymentHistory(targetId);
+      const resData = response.data?.data || response.data?.payments || response.data?.payment || response.data;
+      const list = Array.isArray(resData)
+        ? resData
+        : resData && typeof resData === "object" && (resData.id || resData.amount || resData.gateway_order_id)
+        ? [resData]
+        : [];
+      setPaymentHistoryList(list);
     } catch (error) {
-      console.error("Failed to fetch manager customer details:", error);
-      setDetailCustomer({
-        id: cust.rawId || cust.id,
-        reference_id: cust.referenceId || cust.id,
-        full_name: cust.name || cust.fullName,
-        mobile_number: cust.mobile || cust.mobileNumber,
-        email: cust.email,
-        pan_number: cust.pan,
-        aadhaar_number: cust.aadhaar,
-        date_of_birth: cust.dob,
-        employment_details: cust.employment,
-        monthly_income: cust.income,
-        loan_requirement_details: cust.loanReq,
-        created_at: cust.createdAt,
-        stage: cust.stage,
-        applications: []
-      });
+      console.error("Failed to fetch customer payment history:", error);
+      setPaymentHistoryList([]);
     } finally {
-      setDetailLoading(false);
+      setPaymentHistoryLoading(false);
     }
   };
 
@@ -390,14 +389,70 @@ export default function Manager({ onLogout }) {
     setActiveModal(null);
   };
 
-  const handleGeneratePayment = (e) => {
+  const handleGeneratePayment = async (e) => {
     e.preventDefault();
-    if (selectedCustomer) {
-      handleStageChange(selectedCustomer.id, "Payment Requested");
-      alert(`Payment request of ₹${paymentAmount} (${paymentType}) generated for ${selectedCustomer.name}`);
+    if (!selectedCustomer) return;
+    if (!paymentAmount || Number(paymentAmount) <= 0) {
+      toast.warn("Please enter a valid amount");
+      return;
     }
-    setPaymentAmount("");
-    setActiveModal(null);
+
+    setPaymentLoading(true);
+    try {
+      const custId = selectedCustomer.rawId || (typeof selectedCustomer.id === "number" ? selectedCustomer.id : Number(String(selectedCustomer.id).replace(/^CUST-|^VF-2026-0*/, ""))) || selectedCustomer.id;
+
+      const payload = {
+        customerId: typeof custId === "string" && !isNaN(Number(custId)) ? Number(custId) : custId,
+        amount: Number(paymentAmount),
+        feeType: paymentType || "processing_fee"
+      };
+
+      const response = await apiService.ManagersPaymentRequest(payload);
+      const resData = response.data;
+
+      // Extract and validate Cashfree payment_session_id from backend response
+      const rawSessionId =
+        resData?.gateway?.payment_session_id ||
+        resData?.gateway?.paymentSessionId ||
+        resData?.payment_session_id ||
+        resData?.paymentSessionId ||
+        resData?.data?.payment_session_id ||
+        resData?.data?.paymentSessionId ||
+        resData?.data?.gateway?.payment_session_id ||
+        resData?.data?.gateway?.paymentSessionId;
+
+      // Cashfree PG payment_session_id strictly starts with "session_"
+      const isValidCashfreeSession =
+        typeof rawSessionId === "string" &&
+        rawSessionId.trim().startsWith("session_");
+
+      if (isValidCashfreeSession) {
+        try {
+          // Initialize Cashfree JS SDK in sandbox mode
+          const cashfree = await load({ mode: "sandbox" });
+          await cashfree.checkout({
+            paymentSessionId: rawSessionId.trim(),
+            redirectTarget: "_modal"
+          });
+        } catch (checkoutErr) {
+          console.error("Cashfree checkout error:", checkoutErr);
+        }
+      }
+
+      toast.success(`Payment request of ₹${Number(paymentAmount).toLocaleString()} created successfully!`);
+
+      handleStageChange(selectedCustomer.id, "Payment Requested");
+      fetchCustomers();
+      setPaymentAmount("");
+      setPaymentType("processing_fee");
+      setActiveModal(null);
+    } catch (error) {
+      console.error("Failed to process payment:", error);
+      const msg = error.response?.data?.message || error.message || "Failed to process payment. Please try again.";
+      toast.error(msg);
+    } finally {
+      setPaymentLoading(false);
+    }
   };
 
   return (
@@ -522,6 +577,7 @@ export default function Manager({ onLogout }) {
           setPaymentAmount={setPaymentAmount}
           onSubmit={handleGeneratePayment}
           onClose={() => setActiveModal(null)}
+          loading={paymentLoading}
         />
       )}
 
@@ -548,6 +604,19 @@ export default function Manager({ onLogout }) {
           setSelectedCustomer(cust);
           setActiveModal("docUpload");
         }}
+      />
+
+      {/* Payment History Modal */}
+      <PaymentHistoryModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => {
+          setIsPaymentModalOpen(false);
+          setPaymentCustomer(null);
+          setPaymentHistoryList([]);
+        }}
+        customer={paymentHistoryCustomer}
+        payments={paymentHistoryList}
+        loading={paymentHistoryLoading}
       />
     </div>
   );

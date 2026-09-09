@@ -222,40 +222,75 @@ export function SendNotificationModal({
 // MODAL 4: GENERATE PAYMENT REQUEST
 export function GeneratePaymentModal({
   selectedCustomer,
-  paymentType,
+  paymentType = "processing_fee",
   setPaymentType,
   paymentAmount,
   setPaymentAmount,
   onSubmit,
-  onClose
+  onClose,
+  loading = false
 }) {
   if (!selectedCustomer) return null;
   return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-150">
       <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
         <div className="flex items-center justify-between border-b pb-3 border-slate-100">
           <h3 className="font-bold text-slate-800">Generate Payment Request</h3>
-          <button onClick={onClose}><X className="w-5 h-5 text-slate-400" /></button>
+          <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer">
+            <X className="w-5 h-5" />
+          </button>
         </div>
         <form onSubmit={onSubmit} className="space-y-3">
           <div>
             <label className="text-xs font-semibold text-slate-600">Customer</label>
-            <input disabled type="text" value={`${selectedCustomer.name} (${selectedCustomer.id})`} className="w-full mt-1 p-2 text-xs border rounded-xl bg-slate-100" />
+            <input
+              disabled
+              type="text"
+              value={`${selectedCustomer.name || selectedCustomer.fullName} (${selectedCustomer.referenceId || selectedCustomer.id})`}
+              className="w-full mt-1 p-2.5 text-xs border border-slate-200 rounded-xl bg-slate-50 text-slate-700"
+            />
           </div>
           <div>
             <label className="text-xs font-semibold text-slate-600">Payment Type</label>
-            <select value={paymentType} onChange={e => setPaymentType(e.target.value)} className="w-full mt-1 p-2 text-xs border rounded-xl">
-              <option value="Processing Fee">Processing Fee</option>
-              <option value="Valuation Fee">Property Valuation Fee</option>
-              <option value="Legal Fee">Legal Verification Fee</option>
+            <select
+              value={paymentType}
+              onChange={(e) => setPaymentType(e.target.value)}
+              className="w-full mt-1 p-2.5 text-xs border border-slate-200 rounded-xl bg-white text-slate-800 focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+            >
+              <option value="processing_fee">Processing Fee</option>
+              <option value="documentation_fee">Documentation Fee</option>
+              <option value="valuation_fee">Property Valuation Fee</option>
+              <option value="legal_fee">Legal Verification Fee</option>
             </select>
           </div>
           <div>
             <label className="text-xs font-semibold text-slate-600">Amount (₹)</label>
-            <input required type="number" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} className="w-full mt-1 p-2 text-xs border rounded-xl" />
+            <input
+              required
+              type="number"
+              min="1"
+              value={paymentAmount}
+              onChange={(e) => setPaymentAmount(e.target.value)}
+              placeholder="Enter amount (e.g. 2500)"
+              className="w-full mt-1 p-2.5 text-xs border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500"
+            />
           </div>
-          <button type="submit" className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer">
-            <CreditCard className="w-4 h-4" /> Issue Payment Request
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all shadow-xs"
+          >
+            {loading ? (
+              <>
+                <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Issuing Request...</span>
+              </>
+            ) : (
+              <>
+                <CreditCard className="w-4 h-4" />
+                <span>Issue Payment Request</span>
+              </>
+            )}
           </button>
         </form>
       </div>
