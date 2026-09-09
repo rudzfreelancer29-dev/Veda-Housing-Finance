@@ -29,6 +29,25 @@ export const environment = {
     GetCustomerDocuments: 'documents/',
     DeleteDocuments: 'documents/',
 
+    //Status Management (Admin only)
+    UpdateCustomerApplicationStatus: 'applications/',
+
+    //Status Management (Manager)
+    UpdateCustomerStatus: 'my/applications/',
+
+
+    //Patment Managemant
+    ManagersPaymentRequest: 'payments',
+    GetPaymentHistory: 'payments/',
+    
+    UpdatePaymentStatus: 'payments/',//yet to bind
+
+
+    //Dashboard Reports
+    GetAdminDashboard: 'reports/dashboard',
+
+
+
 
 
     

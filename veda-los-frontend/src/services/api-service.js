@@ -92,6 +92,36 @@ class ApiService {
     DeleteCustomerDocument(documentId){
         return axios.delete(`${environment.CRMService_API}${environment.DeleteDocuments}${documentId}`);
     }
+
+    //Status Management (Admin only)
+    UpdateCustomerApplicationStatus(data,id){
+        return axios.put(`${environment.CRMService_API}${environment.UpdateCustomerApplicationStatus}${id}/status`, data);
+    }
+
+    //Status Management (Manager)
+    UpdateCustomerStatus(data,id){
+        return axios.put(`${environment.CRMService_API}${environment.UpdateCustomerStatus}${id}/status`, data);
+    }
+
+    //Payment Management
+    ManagersPaymentRequest(data){
+        return axios.post(environment.CRMService_API + environment.ManagersPaymentRequest, data);
+    }
+
+    GetPaymentHistory(customerId){
+        return axios.get(`${environment.CRMService_API}${environment.GetPaymentHistory}${customerId}`);
+    }
+
+    UpdatePaymentStatus(applicationId, status){
+        return axios.put(`${environment.CRMService_API}${environment.UpdatePaymentStatus}${applicationId}/status`, status);
+    }
+
+
+    //Dashboard Reports
+    GetAdminDashboard(){
+        return axios.get(environment.CRMService_API + environment.GetAdminDashboard);
+    }
+
 }
 
 export default new ApiService();

@@ -15,6 +15,7 @@ import {
 import { toast } from "react-toastify";
 import apiService from "../../services/api-service";
 import CustomerDetailsModal from "./CustomerDetailsModal";
+import PaymentHistoryModal from "./PaymentHistoryModal";
 
 export default function CustomersTab({
   customers = [],
@@ -32,6 +33,12 @@ export default function CustomersTab({
   const [selectedCustomerDetail, setSelectedCustomerDetail] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
+
+  // Payment History Modal State
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [paymentHistoryCustomer, setPaymentHistoryCustomer] = useState(null);
+  const [paymentHistoryList, setPaymentHistoryList] = useState([]);
+  const [paymentHistoryLoading, setPaymentHistoryLoading] = useState(false);
 
   // Delete Customer State
   const [deleteModal, setDeleteModal] = useState({
@@ -56,35 +63,25 @@ export default function CustomersTab({
   }, [customers, searchQuery]);
 
   const handleCustomerRowClick = async (cust) => {
-    setIsDetailModalOpen(true);
-    setDetailLoading(true);
-    setSelectedCustomerDetail(null);
+    setIsPaymentModalOpen(true);
+    setPaymentHistoryLoading(true);
+    setPaymentHistoryCustomer(cust);
+    setPaymentHistoryList([]);
     try {
-      const targetId = cust.rawId || cust.id;
-      const response = await apiService.GetCustomerById(targetId);
-      const data = response.data?.data || response.data?.customer || response.data;
-      setSelectedCustomerDetail(data);
+      const targetId = cust.rawId || (typeof cust.id === "string" ? cust.id.replace(/^CUST-/, "") : cust.id);
+      const response = await apiService.GetPaymentHistory(targetId);
+      const resData = response.data?.data || response.data?.payments || response.data?.payment || response.data;
+      const list = Array.isArray(resData)
+        ? resData
+        : resData && typeof resData === "object" && (resData.id || resData.amount || resData.gateway_order_id)
+        ? [resData]
+        : [];
+      setPaymentHistoryList(list);
     } catch (error) {
-      console.error("Failed to fetch customer details:", error);
-      // Fallback to customer info from list
-      setSelectedCustomerDetail({
-        id: cust.rawId || cust.id,
-        reference_id: cust.referenceId || cust.id,
-        full_name: cust.name || cust.fullName,
-        mobile_number: cust.mobile || cust.mobileNumber,
-        email: cust.email,
-        date_of_birth: cust.dob,
-        pan_number: cust.pan,
-        aadhaar_number: cust.aadhaar,
-        employment_details: cust.employment,
-        monthly_income: cust.income,
-        loan_requirement_details: cust.loanReq,
-        registered_by_name: cust.manager || cust.registeredByName,
-        created_at: cust.createdAt,
-        applications: []
-      });
+      console.error("Failed to fetch customer payment history:", error);
+      setPaymentHistoryList([]);
     } finally {
-      setDetailLoading(false);
+      setPaymentHistoryLoading(false);
     }
   };
 
@@ -519,6 +516,19 @@ export default function CustomersTab({
           setActiveDocTab("aadhaar");
           setIsDetailModalOpen(false);
         }}
+      />
+
+      {/* Payment History Modal */}
+      <PaymentHistoryModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => {
+          setIsPaymentModalOpen(false);
+          setPaymentHistoryCustomer(null);
+          setPaymentHistoryList([]);
+        }}
+        customer={paymentHistoryCustomer}
+        payments={paymentHistoryList}
+        loading={paymentHistoryLoading}
       />
 
       {/* Delete Customer Confirmation Modal */}
