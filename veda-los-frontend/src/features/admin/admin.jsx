@@ -27,6 +27,7 @@ import AuditLogsTab from "./AuditLogsTab";
 // Import Modular Modal Components
 import ManagerModal from "./ManagerModal";
 import ManagerCustomersModal from "./ManagerCustomersModal";
+import NotificationModal from "./NotificationModal";
 import apiService from "../../services/api-service";
 
 // Initial Mock Data
@@ -180,9 +181,67 @@ export default function Admin() {
         }
     };
 
+    // Fetch Notifications from API (Filter out read notifications)
+    const fetchNotifications = async () => {
+        try {
+            const response = await apiService.GetNotifications();
+            const rawData = response.data;
+            const dataArray = Array.isArray(rawData)
+                ? rawData
+                : (rawData?.data || rawData?.notifications || []);
+
+            if (Array.isArray(dataArray)) {
+                // Filter out already read notifications (is_read: true or read: true)
+                const unreadList = dataArray.filter(item => {
+                    const isRead = item.is_read === true || item.is_read === 1 || item.is_read === "true" || item.read === true || item.read === 1 || item.read === "true";
+                    return !isRead;
+                });
+
+                const mapped = unreadList.map((item, index) => ({
+                    id: item.id || index + 1,
+                    text: item.text || item.message || item.title || item.details || "New Notification",
+                    read: false,
+                    is_read: false,
+                    createdAt: item.created_at || item.createdAt || item.timestamp || null,
+                    raw: item
+                }));
+                setNotifications(mapped);
+            }
+        } catch (error) {
+            console.error("Failed to fetch notifications from API:", error);
+        }
+    };
+
+    // Mark single notification as read & remove from frontend list
+    const handleReadNotification = async (id) => {
+        try {
+            await apiService.ReadNotificationsById(id);
+            setNotifications((prev) => prev.filter((n) => n.id !== id));
+            toast.success("Notification marked as read");
+        } catch (error) {
+            console.error("Failed to mark notification as read:", error);
+            // Optimistically remove from list on frontend
+            setNotifications((prev) => prev.filter((n) => n.id !== id));
+        }
+    };
+
+    // Mark all notifications as read & clear list
+    const handleMarkAllNotificationsRead = async () => {
+        try {
+            setNotifications([]);
+            await apiService.ReadAllNotifications();
+            toast.success("All notifications marked as read");
+        } catch (error) {
+            console.error("Failed to mark all notifications as read:", error);
+            fetchNotifications();
+            toast.error(error.response?.data?.message || "Failed to mark all notifications as read");
+        }
+    };
+
     useEffect(() => {
         fetchManagers();
         fetchCustomers();
+        fetchNotifications();
     }, []);
 
     // Debounce search query to query the GetAllCustomers API
@@ -221,10 +280,19 @@ export default function Admin() {
     const [managerForm, setManagerForm] = useState({ name: "", email: "", password: "", status: "active", applications: 0 });
 
     // Notifications state
-    const [notifications, setNotifications] = useState([
-        { id: 1, text: "New manager account pending approval", read: false },
-        { id: 2, text: "Loan status change: App #301 under review", read: true }
-    ]);
+    const [notifications, setNotifications] = useState([]);
+    const [selectedNotification, setSelectedNotification] = useState(null);
+    const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
+
+    const handleOpenNotificationModal = (notification) => {
+        setSelectedNotification(notification);
+        setIsNotificationModalOpen(true);
+    };
+
+    const handleCloseNotificationModal = () => {
+        setIsNotificationModalOpen(false);
+        setSelectedNotification(null);
+    };
 
     // Settings Configuration State
     const [processingFee, setProcessingFee] = useState("1000");
@@ -477,7 +545,9 @@ export default function Admin() {
                     actionLabel={headerActionLabel}
                     onActionClick={headerOnActionClick}
                     notifications={notifications}
-                    onMarkNotificationsRead={() => setNotifications(notifications.map(n => ({ ...n, read: true })))}
+                    onNotificationClick={handleOpenNotificationModal}
+                    onReadNotification={handleReadNotification}
+                    onMarkNotificationsRead={handleMarkAllNotificationsRead}
                     onLogout={() => alert("Logging out (Mock)")}
                     onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
                 />
@@ -670,6 +740,13 @@ export default function Admin() {
                     </div>
                 </div>
             )}
+            {/* Notification Details Modal */}
+            <NotificationModal
+                isOpen={isNotificationModalOpen}
+                notification={selectedNotification}
+                onClose={handleCloseNotificationModal}
+                onMarkAsRead={handleReadNotification}
+            />
         </div>
     );
 }

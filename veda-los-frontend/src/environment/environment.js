@@ -46,7 +46,16 @@ export const environment = {
     //Dashboard Reports
     GetAdminDashboard: 'reports/dashboard',
 
+    GetTotalRegistrations: 'reports/registrations',
+    PaymentsSummary: 'reports/payments-summary',
+    GetEligibilityStats: 'reports/eligibility-stats',
+    GetAuditLogs: 'audit-logs',
+    GetNotifications: 'notifications',
+    ReadNotificationsById: 'notifications/',
+    ReadAllNotifications: 'notifications/read-all',
+    
 
+ 
 
 
 

@@ -42,6 +42,15 @@ export default function Navbar({
   return "Manager";
 }
 
+  const getInitials = (name, fallback = "M") => {
+    if (!name) return fallback;
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
+
 function onLogout(){
   try {
     localStorage.clear();
@@ -154,11 +163,9 @@ function onLogout(){
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               className="flex items-center gap-1 hover:bg-slate-50 p-1 rounded-lg transition-all cursor-pointer"
             >
-              <img
-                src={user.avatar}
-                alt={user.name}
-                className="w-8 h-8 rounded-full border border-slate-200"
-              />
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#f26e21] to-amber-500 text-white font-black text-xs flex items-center justify-center border border-orange-200 shadow-xs select-none">
+                {getInitials(getUserName(), "M")}
+              </div>
               <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
             </button>
 
@@ -275,11 +282,9 @@ function onLogout(){
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               className="flex items-center gap-2.5 hover:bg-slate-50 px-2.5 py-1.5 rounded-lg transition-all cursor-pointer"
             >
-              <img
-                src={user.avatar}
-                alt={user.name}
-                className="w-8 h-8 rounded-full border border-slate-200"
-              />
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#f26e21] to-amber-500 text-white font-black text-xs flex items-center justify-center border border-orange-200 shadow-xs select-none shrink-0">
+                {getInitials(getUserName(), "M")}
+              </div>
               <div className="text-left">
                 <span className="block text-xs font-semibold text-slate-800 leading-3">{getUserName()}</span>
                 <span className="text-[10px] text-slate-500">{user.role}</span>

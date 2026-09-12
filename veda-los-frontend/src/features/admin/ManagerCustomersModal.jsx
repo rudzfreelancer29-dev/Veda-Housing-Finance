@@ -79,11 +79,9 @@ export default function ManagerCustomersModal({
         <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
           <div>
             <div className="flex items-center gap-2.5">
-              <img
-                src={manager.avatar}
-                alt={manager.name}
-                className="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-xs"
-              />
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#f26e21] to-amber-500 text-white font-black text-sm flex items-center justify-center border border-orange-200 uppercase shadow-xs shrink-0">
+                {manager.name ? (manager.name.trim().split(" ").length >= 2 ? (manager.name.trim().split(" ")[0][0] + manager.name.trim().split(" ")[1][0]).toUpperCase() : manager.name.slice(0, 2).toUpperCase()) : "M"}
+              </div>
               <div>
                 <h3 className="font-extrabold text-slate-800 text-lg leading-tight">
                   Portfolio: {manager.name}
