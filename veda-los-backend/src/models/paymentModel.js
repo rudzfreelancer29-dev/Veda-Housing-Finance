@@ -41,7 +41,7 @@ async function findByCustomerId(customerId) {
 async function updateStatus(id, status, gatewayPaymentId) {
   const { rows } = await pool.query(
     `UPDATE payments SET status = $1, gateway_payment_id = COALESCE($2, gateway_payment_id), updated_at = NOW()
-     WHERE id = $3 RETURNING *`,
+     WHERE application_id = $3 RETURNING *`,
     [status, gatewayPaymentId || null, id]
   );
   return rows[0];

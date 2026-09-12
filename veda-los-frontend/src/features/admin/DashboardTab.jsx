@@ -34,6 +34,12 @@ export default function DashboardTab({
   const [customStartDate, setCustomStartDate] = useState("2026-08-01");
   const [customEndDate, setCustomEndDate] = useState("2026-08-31");
   const [searchActivity, setSearchActivity] = useState("");
+  const [totalRegistrationsData, setTotalRegistrationsData] = useState(null);
+  const [registrationsLoading, setRegistrationsLoading] = useState(false);
+  const [paymentsSummaryData, setPaymentsSummaryData] = useState(null);
+  const [paymentsSummaryLoading, setPaymentsSummaryLoading] = useState(false);
+  const [eligibilityData, setEligibilityData] = useState(null);
+  const [eligibilityLoading, setEligibilityLoading] = useState(false);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -50,8 +56,50 @@ export default function DashboardTab({
     }
   };
 
+  const fetchPaymentsSummary = async () => {
+    setPaymentsSummaryLoading(true);
+    try {
+      const response = await apiService.GetPaymentsSummary();
+      const data = response.data?.data || response.data;
+      setPaymentsSummaryData(data);
+    } catch (error) {
+      console.error("Failed to fetch payments summary:", error);
+    } finally {
+      setPaymentsSummaryLoading(false);
+    }
+  };
+
+  const fetchTotalRegistrations = async () => {
+    setRegistrationsLoading(true);
+    try {
+      const response = await apiService.GetTotalRegistrations();
+      const data = response.data?.data || response.data;
+      setTotalRegistrationsData(data);
+    } catch (error) {
+      console.error("Failed to fetch total registrations:", error);
+    } finally {
+      setRegistrationsLoading(false);
+    }
+  };
+
+  const fetchEligibilityStats = async () => {
+    setEligibilityLoading(true);
+    try {
+      const response = await apiService.GetEligibilityStats();
+      const data = response.data?.data || response.data;
+      setEligibilityData(data);
+    } catch (error) {
+      console.error("Failed to fetch eligibility stats:", error);
+    } finally {
+      setEligibilityLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchDashboardData();
+    fetchTotalRegistrations();
+    fetchPaymentsSummary();
+    fetchEligibilityStats();
   }, []);
 
   // Currency Formatter
@@ -136,19 +184,110 @@ export default function DashboardTab({
 
   const totalCustomerRegistrations = customers.length > 0 ? customers.length : (dashboardData?.totalApplications || 6);
 
-  // 3. Payment Collection Summary Mock/Data
-  const paymentSummary = {
-    collected: 42500000,
-    pending: 8540000,
-    failed: 1220000,
-    refunded: 650000
-  };
+  const registrationCount = useMemo(() => {
+    if (totalRegistrationsData !== null && totalRegistrationsData !== undefined) {
+      if (typeof totalRegistrationsData === "number" || typeof totalRegistrationsData === "string") {
+        return totalRegistrationsData;
+      }
+      const extracted =
+        totalRegistrationsData.total_registrations ??
+        totalRegistrationsData.totalRegistrations ??
+        totalRegistrationsData.total ??
+        totalRegistrationsData.count ??
+        totalRegistrationsData.registrations;
 
-  // 4. Loan Eligibility Statistics Donut
+      if (extracted !== undefined && extracted !== null) {
+        return extracted;
+      }
+      if (Array.isArray(totalRegistrationsData)) {
+        return totalRegistrationsData.reduce((acc, item) => acc + (item.total || item.count || item.registrations || 1), 0);
+      }
+      return customers.length;
+    }
+    return customers.length > 0 ? customers.length : 6;
+  }, [totalRegistrationsData, customers]);
+
+  const registrationMonth = useMemo(() => {
+    if (totalRegistrationsData && typeof totalRegistrationsData === "object") {
+      if (totalRegistrationsData.month) return totalRegistrationsData.month;
+      if (totalRegistrationsData.currentMonth) return totalRegistrationsData.currentMonth;
+      if (totalRegistrationsData.month_name) return totalRegistrationsData.month_name;
+    }
+    const now = new Date();
+    return now.toLocaleString("en-IN", { month: "long" });
+  }, [totalRegistrationsData]);
+
+  // 3. Payment Collection Summary from API / state
+  const paymentSummary = useMemo(() => {
+    if (paymentsSummaryData && typeof paymentsSummaryData === "object") {
+      const collected =
+        paymentsSummaryData.collected ?? 0;
+
+      const pending =
+        paymentsSummaryData.pending ?? 0;
+
+      const failed =
+        paymentsSummaryData.failed ?? 0;
+
+      const refunded =
+        paymentsSummaryData.refunded ?? 0;
+
+      return {
+        collected: Number(collected) || 0,
+        pending: Number(pending) || 0,
+        failed: Number(failed) || 0,
+        refunded: Number(refunded) || 0
+      };
+    }
+
+    return {
+      collected: 0,
+      pending: 0,
+      failed: 0,
+      refunded: 0
+    };
+  }, [paymentsSummaryData]);
+
+  // 4. Loan Eligibility Statistics from API / fallback
+  const eligibilityMetrics = useMemo(() => {
+    if (eligibilityData && typeof eligibilityData === "object") {
+      const eligible = Number(eligibilityData.eligible ?? 0);
+      const pending = Number(eligibilityData.pendingAssessment ?? eligibilityData.pending ?? 0);
+      const rejected = Number(eligibilityData.rejected ?? 0);
+      const total =
+        eligibilityData.totalApplications != null
+          ? Number(eligibilityData.totalApplications)
+          : ((eligible + pending + rejected) || 1);
+      const rate = total > 0 ? Math.round((eligible / total) * 100) : 0;
+
+      return {
+        eligible,
+        pending,
+        rejected,
+        total: total || 1,
+        rate
+      };
+    }
+
+    const eligible = metrics.approved || 2;
+    const pending = metrics.pending || 2;
+    const rejected = metrics.rejected || 1;
+    const total = (eligible + pending + rejected) || 1;
+    const rate = Math.round((eligible / total) * 100);
+
+    return {
+      eligible,
+      pending,
+      rejected,
+      total,
+      rate
+    };
+  }, [eligibilityData, metrics]);
+
   const eligibilityOptions = {
     chart: { fontFamily: "Inter, sans-serif" },
     colors: ["#10b981", "#f59e0b", "#f43f5e"],
-    labels: ["Approved", "Pending", "Rejected"],
+    labels: ["Eligible", "Pending", "Rejected"],
     plotOptions: {
       pie: {
         donut: {
@@ -161,11 +300,7 @@ export default function DashboardTab({
               color: "#64748b",
               fontSize: "11px",
               fontWeight: 600,
-              formatter: () => {
-                const total = (metrics.approved + metrics.pending + metrics.rejected) || 1;
-                const rate = Math.round((metrics.approved / total) * 100);
-                return `${rate}%`;
-              }
+              formatter: () => `${eligibilityMetrics.rate}%`
             }
           }
         }
@@ -181,7 +316,11 @@ export default function DashboardTab({
     stroke: { show: false }
   };
 
-  const eligibilitySeries = [metrics.approved || 2, metrics.pending || 2, metrics.rejected || 1];
+  const eligibilitySeries = [
+    eligibilityMetrics.eligible,
+    eligibilityMetrics.pending,
+    eligibilityMetrics.rejected
+  ];
 
   // 5. Manager Performance Data
   const managerPerformanceList = useMemo(() => {
@@ -423,6 +562,35 @@ export default function DashboardTab({
         </div>
       </div>
 
+      {/* Total Registration Summary Card */}
+      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xs p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:shadow-md transition-all duration-200">
+        <div className="flex items-center gap-3.5">
+          <div className="w-10 h-10 bg-orange-50 text-[#f26e21] rounded-xl flex items-center justify-center font-bold shrink-0 shadow-xs">
+            <UserPlus className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-extrabold text-slate-800 tracking-tight">Total Registration</h3>
+              <span className="text-[10px] font-bold text-[#f26e21] bg-orange-50 px-2.5 py-0.5 rounded-full border border-orange-100 uppercase tracking-wider">
+                {registrationMonth}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+              Monthly customer registrations overview
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 sm:border-l sm:border-slate-100 sm:pl-6">
+          <div>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Registrations</span>
+            <span className="text-2xl font-extrabold text-slate-800 leading-tight block">
+              {registrationsLoading ? "..." : Number(registrationCount || 0).toLocaleString()}
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* SECTION 1: Application Overview (6 KPI Grid) */}
       <div className="space-y-2">
         <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider px-1">Application Overview</h3>
@@ -578,16 +746,22 @@ export default function DashboardTab({
 
           <div className="grid grid-cols-3 gap-2 bg-slate-50 border border-slate-100 p-2.5 rounded-xl text-center">
             <div>
-              <span className="text-[10px] text-slate-400 font-bold uppercase block">Approved</span>
-              <span className="text-xs font-extrabold text-emerald-600">{metrics.approved}</span>
+              <span className="text-[10px] text-slate-400 font-bold uppercase block">Eligible</span>
+              <span className="text-xs font-extrabold text-emerald-600">
+                {eligibilityLoading ? "..." : eligibilityMetrics.eligible}
+              </span>
             </div>
             <div>
               <span className="text-[10px] text-slate-400 font-bold uppercase block">Pending</span>
-              <span className="text-xs font-extrabold text-amber-600">{metrics.pending}</span>
+              <span className="text-xs font-extrabold text-amber-600">
+                {eligibilityLoading ? "..." : eligibilityMetrics.pending}
+              </span>
             </div>
             <div>
               <span className="text-[10px] text-slate-400 font-bold uppercase block">Rejected</span>
-              <span className="text-xs font-extrabold text-rose-600">{metrics.rejected}</span>
+              <span className="text-xs font-extrabold text-rose-600">
+                {eligibilityLoading ? "..." : eligibilityMetrics.rejected}
+              </span>
             </div>
           </div>
         </div>
@@ -602,7 +776,7 @@ export default function DashboardTab({
             <div>
               <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider block">Collected</span>
               <span className="text-lg sm:text-xl font-extrabold text-slate-800 mt-1 block">
-                {formatCurrency(paymentSummary.collected)}
+                {paymentsSummaryLoading ? "..." : formatCurrency(paymentSummary.collected)}
               </span>
               <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 inline-block mt-1">
                 Successfully Received
@@ -618,7 +792,7 @@ export default function DashboardTab({
             <div>
               <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider block">Pending</span>
               <span className="text-lg sm:text-xl font-extrabold text-slate-800 mt-1 block">
-                {formatCurrency(paymentSummary.pending)}
+                {paymentsSummaryLoading ? "..." : formatCurrency(paymentSummary.pending)}
               </span>
               <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100 inline-block mt-1">
                 Awaiting Processing
@@ -634,7 +808,7 @@ export default function DashboardTab({
             <div>
               <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider block">Failed</span>
               <span className="text-lg sm:text-xl font-extrabold text-slate-800 mt-1 block">
-                {formatCurrency(paymentSummary.failed)}
+                {paymentsSummaryLoading ? "..." : formatCurrency(paymentSummary.failed)}
               </span>
               <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100 inline-block mt-1">
                 Transaction Declined
@@ -650,7 +824,7 @@ export default function DashboardTab({
             <div>
               <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider block">Refunded</span>
               <span className="text-lg sm:text-xl font-extrabold text-slate-800 mt-1 block">
-                {formatCurrency(paymentSummary.refunded)}
+                {paymentsSummaryLoading ? "..." : formatCurrency(paymentSummary.refunded)}
               </span>
               <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100 inline-block mt-1">
                 Reversed to Customer

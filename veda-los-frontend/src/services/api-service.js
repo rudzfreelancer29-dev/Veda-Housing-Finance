@@ -122,6 +122,33 @@ class ApiService {
         return axios.get(environment.CRMService_API + environment.GetAdminDashboard);
     }
 
+    GetTotalRegistrations(){
+        return axios.get(`${environment.CRMService_API}${environment.GetTotalRegistrations}`);
+    }
+
+    GetPaymentsSummary(){
+        return axios.get(`${environment.CRMService_API}${environment.PaymentsSummary}`);
+    }
+
+    GetEligibilityStats(){
+        return axios.get(`${environment.CRMService_API}${environment.GetEligibilityStats}`);
+    }
+
+    GetAuditLogs(){
+        return axios.get(`${environment.CRMService_API}${environment.GetAuditLogs}`);
+    }
+
+    GetNotifications(){
+        return axios.get(`${environment.CRMService_API}${environment.GetNotifications}`);
+    }
+
+    ReadNotificationsById(id){
+        return axios.put(`${environment.CRMService_API}${environment.ReadNotificationsById}${id}/read`);
+    }
+
+    ReadAllNotifications(){
+        return axios.put(environment.CRMService_API + environment.ReadAllNotifications);
+    }
 }
 
 export default new ApiService();
