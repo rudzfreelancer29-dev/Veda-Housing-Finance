@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Chart from "react-apexcharts";
 import {
   FileText,
@@ -19,6 +19,7 @@ import {
   PieChart as PieIcon,
   ShieldAlert
 } from "lucide-react";
+import apiService from "../../services/api-service";
 
 export default function DashboardTab({
   applications = [],
@@ -26,12 +27,80 @@ export default function DashboardTab({
   auditLogs = [],
   customers = []
 }) {
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
   const [dateFilter, setDateFilter] = useState("month");
   const [customStartDate, setCustomStartDate] = useState("2026-08-01");
   const [customEndDate, setCustomEndDate] = useState("2026-08-31");
   const [searchActivity, setSearchActivity] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasError, setHasError] = useState(false);
+  const [totalRegistrationsData, setTotalRegistrationsData] = useState(null);
+  const [registrationsLoading, setRegistrationsLoading] = useState(false);
+  const [paymentsSummaryData, setPaymentsSummaryData] = useState(null);
+  const [paymentsSummaryLoading, setPaymentsSummaryLoading] = useState(false);
+  const [eligibilityData, setEligibilityData] = useState(null);
+  const [eligibilityLoading, setEligibilityLoading] = useState(false);
+
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    setHasError(false);
+    try {
+      const response = await apiService.GetAdminDashboard();
+      const data = response.data?.data || response.data;
+      setDashboardData(data);
+    } catch (error) {
+      console.error("Failed to fetch admin dashboard:", error);
+      setHasError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchPaymentsSummary = async () => {
+    setPaymentsSummaryLoading(true);
+    try {
+      const response = await apiService.GetPaymentsSummary();
+      const data = response.data?.data || response.data;
+      setPaymentsSummaryData(data);
+    } catch (error) {
+      console.error("Failed to fetch payments summary:", error);
+    } finally {
+      setPaymentsSummaryLoading(false);
+    }
+  };
+
+  const fetchTotalRegistrations = async () => {
+    setRegistrationsLoading(true);
+    try {
+      const response = await apiService.GetTotalRegistrations();
+      const data = response.data?.data || response.data;
+      setTotalRegistrationsData(data);
+    } catch (error) {
+      console.error("Failed to fetch total registrations:", error);
+    } finally {
+      setRegistrationsLoading(false);
+    }
+  };
+
+  const fetchEligibilityStats = async () => {
+    setEligibilityLoading(true);
+    try {
+      const response = await apiService.GetEligibilityStats();
+      const data = response.data?.data || response.data;
+      setEligibilityData(data);
+    } catch (error) {
+      console.error("Failed to fetch eligibility stats:", error);
+    } finally {
+      setEligibilityLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+    fetchTotalRegistrations();
+    fetchPaymentsSummary();
+    fetchEligibilityStats();
+  }, []);
 
   // Currency Formatter
   const formatCurrency = (amount) => {
@@ -42,44 +111,31 @@ export default function DashboardTab({
     }).format(amount);
   };
 
-  // Simulate refresh / loading state
-  // const handleRefresh = () => {
-  //   setIsLoading(true);
-  //   setHasError(false);
-  //   setTimeout(() => {
-  //     setIsLoading(false);
-  //   }, 600);
-  // };
-
-  // 1. Application Overview Metrics computation
+  // 1. Application Overview Metrics from API or fallbacks
   const metrics = useMemo(() => {
+    if (dashboardData) {
+      return {
+        total: dashboardData.totalApplications ?? 0,
+        active: dashboardData.activeApplications ?? 0,
+        pending: dashboardData.pendingApplications ?? 0,
+        approved: dashboardData.approvedApplications ?? 0,
+        rejected: dashboardData.rejectedApplications ?? 0,
+        completed: dashboardData.completedApplications ?? 0
+      };
+    }
+
     if (applications.length > 0) {
       const total = applications.length;
       const active = applications.filter(a => a.status === "In Progress" || a.status === "Under Review" || a.status === "Received").length;
       const pending = applications.filter(a => a.status === "Pending" || a.status === "Pending Approval").length;
-      const approved = applications.filter(a => a.status === "Approved").length;
+      const approved = applications.filter(a => a.status === "Approved" || a.status === "Eligible").length;
       const rejected = applications.filter(a => a.status === "Rejected").length;
       const completed = applications.filter(a => a.status === "Disbursed" || a.status === "Completed").length;
       return { total, active, pending, approved, rejected, completed };
     }
 
-    // Default KPI metrics based on filter selection
-    switch (dateFilter) {
-      case "today":
-        return { total: 42, active: 18, pending: 9, approved: 12, rejected: 2, completed: 1 };
-      case "week":
-        return { total: 280, active: 110, pending: 45, approved: 95, rejected: 18, completed: 12 };
-      case "year":
-        return { total: 14200, active: 3100, pending: 1850, approved: 7600, rejected: 1150, completed: 500 };
-      case "custom":
-        return { total: 540, active: 190, pending: 85, approved: 210, rejected: 35, completed: 20 };
-      case "all":
-        return { total: 18500, active: 3900, pending: 2200, approved: 10400, rejected: 1400, completed: 600 };
-      case "month":
-      default:
-        return { total: 1250, active: 480, pending: 145, approved: 510, rejected: 75, completed: 40 };
-    }
-  }, [applications, dateFilter]);
+    return { total: 6, active: 4, pending: 2, approved: 2, rejected: 1, completed: 1 };
+  }, [dashboardData, applications]);
 
   // 2. Customer Registration Trends (Last 6 Months Data)
   const registrationTrendsOptions = {
@@ -126,21 +182,112 @@ export default function DashboardTab({
     }
   ];
 
-  const totalCustomerRegistrations = customers.length > 0 ? customers.length : 4100;
+  const totalCustomerRegistrations = customers.length > 0 ? customers.length : (dashboardData?.totalApplications || 6);
 
-  // 3. Payment Collection Summary Mock/Data
-  const paymentSummary = {
-    collected: 42500000, // ₹4.25 Cr
-    pending: 8540000,    // ₹85.4 Lakhs
-    failed: 1220000,     // ₹12.2 Lakhs
-    refunded: 650000     // ₹6.5 Lakhs
-  };
+  const registrationCount = useMemo(() => {
+    if (totalRegistrationsData !== null && totalRegistrationsData !== undefined) {
+      if (typeof totalRegistrationsData === "number" || typeof totalRegistrationsData === "string") {
+        return totalRegistrationsData;
+      }
+      const extracted =
+        totalRegistrationsData.total_registrations ??
+        totalRegistrationsData.totalRegistrations ??
+        totalRegistrationsData.total ??
+        totalRegistrationsData.count ??
+        totalRegistrationsData.registrations;
 
-  // 4. Loan Eligibility Statistics Donut/Bar Chart
+      if (extracted !== undefined && extracted !== null) {
+        return extracted;
+      }
+      if (Array.isArray(totalRegistrationsData)) {
+        return totalRegistrationsData.reduce((acc, item) => acc + (item.total || item.count || item.registrations || 1), 0);
+      }
+      return customers.length;
+    }
+    return customers.length > 0 ? customers.length : 6;
+  }, [totalRegistrationsData, customers]);
+
+  const registrationMonth = useMemo(() => {
+    if (totalRegistrationsData && typeof totalRegistrationsData === "object") {
+      if (totalRegistrationsData.month) return totalRegistrationsData.month;
+      if (totalRegistrationsData.currentMonth) return totalRegistrationsData.currentMonth;
+      if (totalRegistrationsData.month_name) return totalRegistrationsData.month_name;
+    }
+    const now = new Date();
+    return now.toLocaleString("en-IN", { month: "long" });
+  }, [totalRegistrationsData]);
+
+  // 3. Payment Collection Summary from API / state
+  const paymentSummary = useMemo(() => {
+    if (paymentsSummaryData && typeof paymentsSummaryData === "object") {
+      const collected =
+        paymentsSummaryData.collected ?? 0;
+
+      const pending =
+        paymentsSummaryData.pending ?? 0;
+
+      const failed =
+        paymentsSummaryData.failed ?? 0;
+
+      const refunded =
+        paymentsSummaryData.refunded ?? 0;
+
+      return {
+        collected: Number(collected) || 0,
+        pending: Number(pending) || 0,
+        failed: Number(failed) || 0,
+        refunded: Number(refunded) || 0
+      };
+    }
+
+    return {
+      collected: 0,
+      pending: 0,
+      failed: 0,
+      refunded: 0
+    };
+  }, [paymentsSummaryData]);
+
+  // 4. Loan Eligibility Statistics from API / fallback
+  const eligibilityMetrics = useMemo(() => {
+    if (eligibilityData && typeof eligibilityData === "object") {
+      const eligible = Number(eligibilityData.eligible ?? 0);
+      const pending = Number(eligibilityData.pendingAssessment ?? eligibilityData.pending ?? 0);
+      const rejected = Number(eligibilityData.rejected ?? 0);
+      const total =
+        eligibilityData.totalApplications != null
+          ? Number(eligibilityData.totalApplications)
+          : ((eligible + pending + rejected) || 1);
+      const rate = total > 0 ? Math.round((eligible / total) * 100) : 0;
+
+      return {
+        eligible,
+        pending,
+        rejected,
+        total: total || 1,
+        rate
+      };
+    }
+
+    const eligible = metrics.approved || 2;
+    const pending = metrics.pending || 2;
+    const rejected = metrics.rejected || 1;
+    const total = (eligible + pending + rejected) || 1;
+    const rate = Math.round((eligible / total) * 100);
+
+    return {
+      eligible,
+      pending,
+      rejected,
+      total,
+      rate
+    };
+  }, [eligibilityData, metrics]);
+
   const eligibilityOptions = {
     chart: { fontFamily: "Inter, sans-serif" },
     colors: ["#10b981", "#f59e0b", "#f43f5e"],
-    labels: ["Eligible", "Pending Assessment", "Rejected"],
+    labels: ["Eligible", "Pending", "Rejected"],
     plotOptions: {
       pie: {
         donut: {
@@ -153,7 +300,7 @@ export default function DashboardTab({
               color: "#64748b",
               fontSize: "11px",
               fontWeight: 600,
-              formatter: () => "65.6%"
+              formatter: () => `${eligibilityMetrics.rate}%`
             }
           }
         }
@@ -169,7 +316,11 @@ export default function DashboardTab({
     stroke: { show: false }
   };
 
-  const eligibilitySeries = [820, 280, 150];
+  const eligibilitySeries = [
+    eligibilityMetrics.eligible,
+    eligibilityMetrics.pending,
+    eligibilityMetrics.rejected
+  ];
 
   // 5. Manager Performance Data
   const managerPerformanceList = useMemo(() => {
@@ -194,58 +345,80 @@ export default function DashboardTab({
     ];
   }, [managers]);
 
-  // 6. Recent Activities Data (Latest 10)
+  // Helper date formatter
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "-";
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formatStatusText = (status) => {
+    if (!status) return "Under Review";
+    return status.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  // 6. Recent Activities from API recentActivities
   const recentActivitiesList = useMemo(() => {
+    if (dashboardData?.recentActivities && Array.isArray(dashboardData.recentActivities) && dashboardData.recentActivities.length > 0) {
+      return dashboardData.recentActivities.map((act, index) => ({
+        id: act.application_id || index + 1,
+        customerName: act.full_name || "Customer",
+        refId: act.reference_id || `APP-${act.application_id}`,
+        status: formatStatusText(act.status),
+        rawStatus: act.status,
+        updatedAt: formatDate(act.updated_at)
+      }));
+    }
+
     if (auditLogs.length > 0) {
       return auditLogs.slice(0, 10).map((log, index) => ({
         id: log.id || index + 1,
         customerName: log.manager || log.details || "Customer",
         refId: `VEDA-2026-0${100 + index}`,
         status: log.action || "Updated",
+        rawStatus: log.action,
         updatedAt: log.timestamp || "Just now"
       }));
     }
 
-    return [
-      { id: 1, customerName: "Rajesh Kumar", refId: "VEDA-2026-0101", status: "Approved", updatedAt: "10 mins ago" },
-      { id: 2, customerName: "Ananya Sharma", refId: "VEDA-2026-0102", status: "Under Review", updatedAt: "25 mins ago" },
-      { id: 3, customerName: "Vikram Malhotra", refId: "VEDA-2026-0103", status: "Disbursed", updatedAt: "1 hour ago" },
-      { id: 4, customerName: "Priya Patel", refId: "VEDA-2026-0104", status: "Pending Approval", updatedAt: "2 hours ago" },
-      { id: 5, customerName: "Suresh Menon", refId: "VEDA-2026-0105", status: "Rejected", updatedAt: "3 hours ago" },
-      { id: 6, customerName: "Meera Reddy", refId: "VEDA-2026-0106", status: "In Progress", updatedAt: "4 hours ago" },
-      { id: 7, customerName: "Amitabh Verma", refId: "VEDA-2026-0107", status: "Approved", updatedAt: "5 hours ago" },
-      { id: 8, customerName: "Sneha Joshi", refId: "VEDA-2026-0108", status: "Documents Pending", updatedAt: "6 hours ago" },
-      { id: 9, customerName: "Rohan Das", refId: "VEDA-2026-0109", status: "Disbursed", updatedAt: "8 hours ago" },
-      { id: 10, customerName: "Kavita Rao", refId: "VEDA-2026-0110", status: "Under Review", updatedAt: "12 hours ago" }
-    ];
-  }, [auditLogs]);
+    return [];
+  }, [dashboardData, auditLogs]);
 
   const filteredActivities = useMemo(() => {
     if (!searchActivity) return recentActivitiesList;
+    const q = searchActivity.toLowerCase();
     return recentActivitiesList.filter(
       act =>
-        act.customerName.toLowerCase().includes(searchActivity.toLowerCase()) ||
-        act.refId.toLowerCase().includes(searchActivity.toLowerCase()) ||
-        act.status.toLowerCase().includes(searchActivity.toLowerCase())
+        act.customerName.toLowerCase().includes(q) ||
+        act.refId.toLowerCase().includes(q) ||
+        act.status.toLowerCase().includes(q)
     );
   }, [recentActivitiesList, searchActivity]);
 
   // Helper badge color for activity status
   const getStatusBadgeClass = (status) => {
-    switch (status?.toLowerCase()) {
-      case "approved":
-      case "disbursed":
-      case "completed":
-        return "bg-emerald-50 text-emerald-700 border-emerald-200";
-      case "rejected":
-      case "failed":
-        return "bg-rose-50 text-rose-700 border-rose-200";
-      case "in progress":
-      case "under review":
-        return "bg-blue-50 text-blue-700 border-blue-200";
-      default:
-        return "bg-amber-50 text-amber-700 border-amber-200";
+    const s = (status || "").toLowerCase().replace(/_/g, " ");
+    if (s.includes("approved") || s.includes("completed") || s.includes("eligible")) {
+      return "bg-emerald-50 text-emerald-700 border-emerald-200";
     }
+    if (s.includes("rejected") || s.includes("failed")) {
+      return "bg-rose-50 text-rose-700 border-rose-200";
+    }
+    if (s.includes("under review") || s.includes("in progress") || s.includes("loan processing")) {
+      return "bg-blue-50 text-blue-700 border-blue-200";
+    }
+    return "bg-amber-50 text-amber-700 border-amber-200";
   };
 
   if (hasError) {
@@ -255,7 +428,7 @@ export default function DashboardTab({
         <h3 className="text-lg font-bold text-rose-900">Failed to load Dashboard data</h3>
         <p className="text-sm text-rose-700">Something went wrong while fetching analytics metrics.</p>
         <button
-          onClick={handleRefresh}
+          onClick={fetchDashboardData}
           className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-xs transition-all shadow-sm cursor-pointer"
         >
           Try Again
@@ -389,6 +562,35 @@ export default function DashboardTab({
         </div>
       </div>
 
+      {/* Total Registration Summary Card */}
+      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xs p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:shadow-md transition-all duration-200">
+        <div className="flex items-center gap-3.5">
+          <div className="w-10 h-10 bg-orange-50 text-[#f26e21] rounded-xl flex items-center justify-center font-bold shrink-0 shadow-xs">
+            <UserPlus className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-extrabold text-slate-800 tracking-tight">Total Registration</h3>
+              <span className="text-[10px] font-bold text-[#f26e21] bg-orange-50 px-2.5 py-0.5 rounded-full border border-orange-100 uppercase tracking-wider">
+                {registrationMonth}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+              Monthly customer registrations overview
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 sm:border-l sm:border-slate-100 sm:pl-6">
+          <div>
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Registrations</span>
+            <span className="text-2xl font-extrabold text-slate-800 leading-tight block">
+              {registrationsLoading ? "..." : Number(registrationCount || 0).toLocaleString()}
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* SECTION 1: Application Overview (6 KPI Grid) */}
       <div className="space-y-2">
         <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider px-1">Application Overview</h3>
@@ -403,7 +605,7 @@ export default function DashboardTab({
             </div>
             <div className="mt-3">
               <span className="text-xl sm:text-2xl font-extrabold text-slate-800 block leading-tight">
-                {isLoading ? "..." : metrics.total.toLocaleString()}
+                {loading ? "..." : metrics.total.toLocaleString()}
               </span>
               <span className="text-[10px] font-bold text-blue-600 block mt-0.5 truncate">All Submissions</span>
             </div>
@@ -419,7 +621,7 @@ export default function DashboardTab({
             </div>
             <div className="mt-3">
               <span className="text-xl sm:text-2xl font-extrabold text-slate-800 block leading-tight">
-                {isLoading ? "..." : metrics.active.toLocaleString()}
+                {loading ? "..." : metrics.active.toLocaleString()}
               </span>
               <span className="text-[10px] font-bold text-indigo-600 block mt-0.5 truncate">In Processing</span>
             </div>
@@ -435,7 +637,7 @@ export default function DashboardTab({
             </div>
             <div className="mt-3">
               <span className="text-xl sm:text-2xl font-extrabold text-slate-800 block leading-tight">
-                {isLoading ? "..." : metrics.pending.toLocaleString()}
+                {loading ? "..." : metrics.pending.toLocaleString()}
               </span>
               <span className="text-[10px] font-bold text-amber-600 block mt-0.5 truncate">Needs Review</span>
             </div>
@@ -451,7 +653,7 @@ export default function DashboardTab({
             </div>
             <div className="mt-3">
               <span className="text-xl sm:text-2xl font-extrabold text-slate-800 block leading-tight">
-                {isLoading ? "..." : metrics.approved.toLocaleString()}
+                {loading ? "..." : metrics.approved.toLocaleString()}
               </span>
               <span className="text-[10px] font-bold text-emerald-600 block mt-0.5 truncate">Ready for Sanction</span>
             </div>
@@ -467,7 +669,7 @@ export default function DashboardTab({
             </div>
             <div className="mt-3">
               <span className="text-xl sm:text-2xl font-extrabold text-slate-800 block leading-tight">
-                {isLoading ? "..." : metrics.rejected.toLocaleString()}
+                {loading ? "..." : metrics.rejected.toLocaleString()}
               </span>
               <span className="text-[10px] font-bold text-rose-600 block mt-0.5 truncate">Not Qualified</span>
             </div>
@@ -483,7 +685,7 @@ export default function DashboardTab({
             </div>
             <div className="mt-3">
               <span className="text-xl sm:text-2xl font-extrabold text-slate-800 block leading-tight">
-                {isLoading ? "..." : metrics.completed.toLocaleString()}
+                {loading ? "..." : metrics.completed.toLocaleString()}
               </span>
               <span className="text-[10px] font-bold text-teal-600 block mt-0.5 truncate">Disbursed / Closed</span>
             </div>
@@ -545,15 +747,21 @@ export default function DashboardTab({
           <div className="grid grid-cols-3 gap-2 bg-slate-50 border border-slate-100 p-2.5 rounded-xl text-center">
             <div>
               <span className="text-[10px] text-slate-400 font-bold uppercase block">Eligible</span>
-              <span className="text-xs font-extrabold text-emerald-600">820</span>
+              <span className="text-xs font-extrabold text-emerald-600">
+                {eligibilityLoading ? "..." : eligibilityMetrics.eligible}
+              </span>
             </div>
             <div>
               <span className="text-[10px] text-slate-400 font-bold uppercase block">Pending</span>
-              <span className="text-xs font-extrabold text-amber-600">280</span>
+              <span className="text-xs font-extrabold text-amber-600">
+                {eligibilityLoading ? "..." : eligibilityMetrics.pending}
+              </span>
             </div>
             <div>
               <span className="text-[10px] text-slate-400 font-bold uppercase block">Rejected</span>
-              <span className="text-xs font-extrabold text-rose-600">150</span>
+              <span className="text-xs font-extrabold text-rose-600">
+                {eligibilityLoading ? "..." : eligibilityMetrics.rejected}
+              </span>
             </div>
           </div>
         </div>
@@ -568,7 +776,7 @@ export default function DashboardTab({
             <div>
               <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider block">Collected</span>
               <span className="text-lg sm:text-xl font-extrabold text-slate-800 mt-1 block">
-                {formatCurrency(paymentSummary.collected)}
+                {paymentsSummaryLoading ? "..." : formatCurrency(paymentSummary.collected)}
               </span>
               <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 inline-block mt-1">
                 Successfully Received
@@ -584,7 +792,7 @@ export default function DashboardTab({
             <div>
               <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider block">Pending</span>
               <span className="text-lg sm:text-xl font-extrabold text-slate-800 mt-1 block">
-                {formatCurrency(paymentSummary.pending)}
+                {paymentsSummaryLoading ? "..." : formatCurrency(paymentSummary.pending)}
               </span>
               <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100 inline-block mt-1">
                 Awaiting Processing
@@ -600,7 +808,7 @@ export default function DashboardTab({
             <div>
               <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider block">Failed</span>
               <span className="text-lg sm:text-xl font-extrabold text-slate-800 mt-1 block">
-                {formatCurrency(paymentSummary.failed)}
+                {paymentsSummaryLoading ? "..." : formatCurrency(paymentSummary.failed)}
               </span>
               <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-100 inline-block mt-1">
                 Transaction Declined
@@ -616,7 +824,7 @@ export default function DashboardTab({
             <div>
               <span className="text-[11px] text-slate-400 font-bold uppercase tracking-wider block">Refunded</span>
               <span className="text-lg sm:text-xl font-extrabold text-slate-800 mt-1 block">
-                {formatCurrency(paymentSummary.refunded)}
+                {paymentsSummaryLoading ? "..." : formatCurrency(paymentSummary.refunded)}
               </span>
               <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100 inline-block mt-1">
                 Reversed to Customer

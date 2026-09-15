@@ -75,6 +75,8 @@ export default function ManagerManagementTab({
     }
   };
 
+  
+
   return (
     <div className="space-y-6 w-full">
 
@@ -222,11 +224,9 @@ export default function ManagerManagementTab({
                       </td>
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
-                          <img
-                            src={manager.avatar}
-                            alt={manager.name}
-                            className="w-8 h-8 rounded-full object-cover border border-slate-100"
-                          />
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#f26e21] to-amber-500 text-white flex items-center justify-center font-bold text-xs shrink-0 border border-orange-200 uppercase shadow-xs">
+                            {manager.name ? (manager.name.trim().split(" ").length >= 2 ? (manager.name.trim().split(" ")[0][0] + manager.name.trim().split(" ")[1][0]).toUpperCase() : manager.name.slice(0, 2).toUpperCase()) : "M"}
+                          </div>
                           <button
                             onClick={() => {
                               console.log("Manager name clicked in ManagerManagementTab:", manager);
