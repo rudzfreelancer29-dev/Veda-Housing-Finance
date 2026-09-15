@@ -1,16 +1,8 @@
 const pool = require("../db");
 
-// Status buckets used across reports. Documented here once so the mapping
-// logic doesn't get silently duplicated/out-of-sync across queries.
-// - Pending: not yet reviewed or waiting on the customer
-// - Approved: past initial review, moving toward disbursal (no credit
-//   bureau step in this build, so "eligible" is decided manually by a Manager)
-// - Rejected / Completed: terminal states
 const PENDING = ["new_registration", "under_review", "documents_pending", "on_hold"];
 const APPROVED = ["eligible", "payment_pending", "payment_completed", "loan_processing"];
 
-// PDF Section 4 (Dashboard Features): Total / Active / Pending / Approved /
-// Rejected / Completed Applications + Recent Activities.
 async function dashboardStats() {
   const { rows: totalRows } = await pool.query(`SELECT COUNT(*)::int AS count FROM applications`);
   const { rows: statusRows } = await pool.query(
@@ -38,8 +30,6 @@ async function dashboardStats() {
   };
 }
 
-// PDF Section 8 (Administrative Reports): Total Customer Registrations +
-// Monthly Registration Trends.
 async function registrationTrends() {
   const { rows: totalRows } = await pool.query(`SELECT COUNT(*)::int AS count FROM customers`);
   const { rows: monthly } = await pool.query(`
@@ -52,8 +42,6 @@ async function registrationTrends() {
   return { totalRegistrations: totalRows[0].count, monthlyTrends: monthly.reverse() };
 }
 
-// PDF Section 8: Payment Collection Summary. Will show zeros until the
-// Manager-side "collect payment" API (a later phase) is actually creating rows.
 async function paymentsSummary() {
   const { rows } = await pool.query(`
     SELECT status, COALESCE(SUM(amount), 0)::float AS total, COUNT(*)::int AS count
@@ -68,9 +56,6 @@ async function paymentsSummary() {
   };
 }
 
-// PDF Section 8: Loan Eligibility Statistics. No credit bureau in this
-// build, so "eligible" reflects the Manager's manual status update, not a
-// credit score.
 async function eligibilityStats() {
   const { rows: totalRows } = await pool.query(`SELECT COUNT(*)::int AS count FROM applications`);
   const { rows: statusRows } = await pool.query(
@@ -87,13 +72,6 @@ async function eligibilityStats() {
   };
 }
 
-// PDF Section 8: Manager Performance Reports — Applications Processed,
-// Registrations Completed, Status Conversion Analysis.
-//
-// Applications and customers are pre-aggregated in separate subqueries
-// before joining to users — joining both raw tables directly to `users`
-// at once would fan out (e.g. 4 applications x 4 customers = 16 rows for
-// one manager), silently inflating every count.
 async function managerPerformance() {
   const { rows } = await pool.query(`
     SELECT
@@ -129,4 +107,37 @@ async function managerPerformance() {
   }));
 }
 
-module.exports = { dashboardStats, registrationTrends, paymentsSummary, eligibilityStats, managerPerformance };
+// NEW — powers the downloadable Excel report (owner's request: monthly /
+// quarterly / yearly filter). One row per application, joined with its
+// customer, assigned manager, and total amount actually collected against
+// it. `from`/`to` are JS Date objects — the period math lives in the
+// controller, this just runs the query for whatever range it's given.
+async function exportData({ from, to }) {
+  const { rows } = await pool.query(
+    `SELECT
+       c.reference_id,
+       c.full_name,
+       c.mobile_number,
+       c.email,
+       u.name AS manager_name,
+       a.status,
+       a.created_at AS registered_at,
+       a.updated_at AS last_updated,
+       COALESCE(SUM(p.amount) FILTER (WHERE p.status = 'successful'), 0)::float AS amount_collected
+     FROM applications a
+     JOIN customers c ON c.id = a.customer_id
+     LEFT JOIN users u ON u.id = a.assigned_to
+     LEFT JOIN payments p ON p.application_id = a.id
+     WHERE a.created_at >= $1 AND a.created_at <= $2
+     GROUP BY c.reference_id, c.full_name, c.mobile_number, c.email, u.name,
+              a.status, a.created_at, a.updated_at
+     ORDER BY a.created_at DESC`,
+    [from, to]
+  );
+  return rows;
+}
+
+module.exports = {
+  dashboardStats, registrationTrends, paymentsSummary, eligibilityStats,
+  managerPerformance, exportData,
+};

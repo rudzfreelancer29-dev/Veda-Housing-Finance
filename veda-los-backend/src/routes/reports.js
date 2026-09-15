@@ -11,5 +11,6 @@ router.get("/registrations", reportController.registrations);
 router.get("/payments-summary", reportController.paymentsSummary);
 router.get("/eligibility-stats", reportController.eligibilityStats);
 router.get("/manager-performance", reportController.managerPerformance);
+router.get("/export", reportController.exportReport);
 
 module.exports = router;
