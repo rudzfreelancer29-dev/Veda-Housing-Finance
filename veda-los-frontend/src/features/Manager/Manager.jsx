@@ -611,12 +611,13 @@ export default function Manager({ onLogout }) {
         isOpen={isPaymentModalOpen}
         onClose={() => {
           setIsPaymentModalOpen(false);
-          setPaymentCustomer(null);
+          setPaymentHistoryCustomer(null);
           setPaymentHistoryList([]);
         }}
         customer={paymentHistoryCustomer}
         payments={paymentHistoryList}
         loading={paymentHistoryLoading}
+        onPaymentUpdated={fetchCustomers}
       />
     </div>
   );

@@ -21,9 +21,10 @@ export default function CustomerDocumentsModal({
   isOpen = true,
   onClose,
   onUploadSuccess,
-  initialTab = "view"
+  initialTab = "view",
+  readOnly = false
 }) {
-  const [activeTab, setActiveTab] = useState(initialTab); // 'view' | 'upload'
+  const [activeTab, setActiveTab] = useState(readOnly ? "view" : initialTab); // 'view' | 'upload'
   const [documents, setDocuments] = useState([]);
   const [docsLoading, setDocsLoading] = useState(false);
   const [filterType, setFilterType] = useState("all");
@@ -39,7 +40,12 @@ export default function CustomerDocumentsModal({
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
 
-  const targetCustomerId = selectedCustomer?.rawId || selectedCustomer?.id;
+  const targetCustomerId =
+    selectedCustomer?.rawId ||
+    (typeof selectedCustomer?.id === "string"
+      ? selectedCustomer.id.replace(/^CUST-/, "")
+      : selectedCustomer?.id) ||
+    selectedCustomer?.customerId;
 
   const fetchCustomerDocuments = async () => {
     if (!targetCustomerId) return;
@@ -298,17 +304,19 @@ export default function CustomerDocumentsModal({
                 </span>
               </button>
 
-              <button
-                onClick={() => setActiveTab("upload")}
-                className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
-                  activeTab === "upload"
-                    ? "border-blue-600 text-blue-600"
-                    : "border-transparent text-slate-500 hover:text-slate-700"
-                }`}
-              >
-                <Upload className="w-3.5 h-3.5" />
-                Upload New Document
-              </button>
+              {!readOnly && (
+                <button
+                  onClick={() => setActiveTab("upload")}
+                  className={`px-4 py-2.5 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center gap-1.5 ${
+                    activeTab === "upload"
+                      ? "border-blue-600 text-blue-600"
+                      : "border-transparent text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  Upload New Document
+                </button>
+              )}
             </div>
 
             {activeTab === "view" && (
@@ -398,11 +406,11 @@ export default function CustomerDocumentsModal({
                       </h4>
                       <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
                         {documents.length === 0
-                          ? "Upload customer PAN Card, Aadhaar Card, or Income proof to view them here."
+                          ? "No documents have been uploaded for this customer yet."
                           : "Try selecting 'All' to see all uploaded customer documents."}
                       </p>
                     </div>
-                    {documents.length === 0 && (
+                    {documents.length === 0 && !readOnly && (
                       <button
                         onClick={() => setActiveTab("upload")}
                         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
@@ -467,7 +475,7 @@ export default function CustomerDocumentsModal({
                             </span>
 
                             {/* Delete Button */}
-                            {doc.id && (
+                            {!readOnly && doc.id && (
                               <button
                                 type="button"
                                 onClick={(e) => {
