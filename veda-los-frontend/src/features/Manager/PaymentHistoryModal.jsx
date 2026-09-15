@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, User, Phone, Mail, CreditCard, Calendar, CheckCircle2, Clock, AlertCircle } from "lucide-react";
+import { X, User, Phone, Mail, CreditCard, Calendar, CheckCircle2, Clock, AlertCircle, Edit } from "lucide-react";
 import { toast } from "react-toastify";
 import apiService from "../../services/api-service";
 
@@ -19,21 +19,15 @@ export default function PaymentHistoryModal({
   onPaymentUpdated
 }) {
   const [paymentList, setPaymentList] = useState(payments || []);
-  const [selectedStatus, setSelectedStatus] = useState("pending");
-  const [confirmModal, setConfirmModal] = useState({
+  const [statusModal, setStatusModal] = useState({
     isOpen: false,
-    newStatus: "",
+    paymentRecord: null,
+    status: "pending",
     loading: false
   });
 
   useEffect(() => {
     setPaymentList(payments || []);
-    if (payments && payments.length > 0) {
-      const s = (payments[0].status || "pending").toLowerCase();
-      setSelectedStatus(s === "success" ? "successful" : s);
-    } else {
-      setSelectedStatus("pending");
-    }
   }, [payments]);
 
   if (!isOpen) return null;
@@ -52,15 +46,15 @@ export default function PaymentHistoryModal({
   };
 
   const getStatusBadge = (status) => {
-    const s = (status || "").toLowerCase();
-    if (s === "successful" || s === "success" || s === "completed" || s === "paid") {
+    const s = (status || "").toLowerCase().replace(/ /g, "_");
+    if (s === "successful" || s === "success" || s === "completed" || s === "paid" || s === "payment_completed") {
       return {
         bg: "bg-emerald-50 text-emerald-700 border-emerald-200",
         icon: <CheckCircle2 className="w-3.5 h-3.5" />,
         text: "Successful"
       };
     }
-    if (s === "pending" || s === "payment requested") {
+    if (s === "pending" || s === "payment_pending" || s === "payment requested") {
       return {
         bg: "bg-amber-50 text-amber-700 border-amber-200",
         icon: <Clock className="w-3.5 h-3.5" />,
@@ -77,7 +71,7 @@ export default function PaymentHistoryModal({
     return {
       bg: "bg-rose-50 text-rose-700 border-rose-200",
       icon: <AlertCircle className="w-3.5 h-3.5" />,
-      text: status ? status.charAt(0).toUpperCase() + status.slice(1) : "Failed"
+      text: status ? status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "Failed"
     };
   };
 
@@ -86,47 +80,53 @@ export default function PaymentHistoryModal({
     return type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
-  const handleCommonStatusChange = (newStatus) => {
-    if (selectedStatus.toLowerCase() === newStatus.toLowerCase()) return;
-    setConfirmModal({
+  const handleOpenStatusModal = (payment) => {
+    let currStatus = (payment.status || "pending").toLowerCase().replace(/ /g, "_");
+    if (currStatus === "payment_pending") currStatus = "pending";
+    if (currStatus === "payment_completed" || currStatus === "success" || currStatus === "completed" || currStatus === "paid") {
+      currStatus = "successful";
+    }
+    if (!["pending", "successful", "failed", "refunded"].includes(currStatus)) {
+      currStatus = "pending";
+    }
+
+    setStatusModal({
       isOpen: true,
-      newStatus,
+      paymentRecord: payment,
+      status: currStatus,
       loading: false
     });
   };
 
   const handleConfirmStatusUpdate = async () => {
-    if (!confirmModal.newStatus) return;
-    setConfirmModal((prev) => ({ ...prev, loading: true }));
+    if (!statusModal.paymentRecord) return;
+    setStatusModal((prev) => ({ ...prev, loading: true }));
 
-    const applicationId =
-      paymentList.find((p) => p.application_id || p.applicationId)?.application_id ||
-      paymentList.find((p) => p.application_id || p.applicationId)?.applicationId ||
-      customer?.applicationId ||
-      customer?.application_id ||
-      customer?.rawId ||
-      customer?.id;
+    const recordId = statusModal.paymentRecord.id;
 
-    if (!applicationId) {
-      toast.error("Application ID not found for this customer.");
-      setConfirmModal((prev) => ({ ...prev, loading: false }));
+    if (!recordId) {
+      toast.error("Payment Record ID not found.");
+      setStatusModal((prev) => ({ ...prev, loading: false }));
       return;
     }
 
     try {
-      await apiService.UpdatePaymentStatus(applicationId, { status: confirmModal.newStatus });
+      await apiService.UpdatePaymentStatus(recordId, { status: statusModal.status });
       toast.success("Payment status updated successfully!");
 
-      setSelectedStatus(confirmModal.newStatus);
       setPaymentList((prevList) =>
-        prevList.map((item) => ({ ...item, status: confirmModal.newStatus }))
+        prevList.map((item) =>
+          item.id === statusModal.paymentRecord.id
+            ? { ...item, status: statusModal.status }
+            : item
+        )
       );
 
       if (onPaymentUpdated) {
         onPaymentUpdated();
       }
 
-      setConfirmModal({ isOpen: false, newStatus: "", loading: false });
+      setStatusModal({ isOpen: false, paymentRecord: null, status: "pending", loading: false });
     } catch (error) {
       console.error("Failed to update payment status:", error);
       const msg =
@@ -134,7 +134,7 @@ export default function PaymentHistoryModal({
         error?.response?.data?.error ||
         "Failed to update payment status. Please try again.";
       toast.error(msg);
-      setConfirmModal((prev) => ({ ...prev, loading: false }));
+      setStatusModal((prev) => ({ ...prev, loading: false }));
     }
   };
 
@@ -194,24 +194,8 @@ export default function PaymentHistoryModal({
           <div className="space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                <CreditCard className="w-3.5 h-3.5 text-emerald-600" /> Payment Records
+                <CreditCard className="w-3.5 h-3.5 text-emerald-600" /> Payment Records ({paymentList.length})
               </h4>
-              {paymentList && paymentList.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-500 font-medium">Update Status:</span>
-                  <select
-                    value={selectedStatus}
-                    onChange={(e) => handleCommonStatusChange(e.target.value)}
-                    className="text-xs bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1 font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer shadow-xs transition-colors"
-                  >
-                    {PAYMENT_STATUS_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
             </div>
 
             {loading ? (
@@ -226,15 +210,16 @@ export default function PaymentHistoryModal({
                   return (
                     <div
                       key={p.id || idx}
-                      className="border border-slate-200/80 rounded-xl p-4 bg-white shadow-xs space-y-3"
+                      className="border border-slate-200/80 rounded-xl p-4 bg-white shadow-xs space-y-3 hover:border-slate-300 transition-colors"
                     >
                       <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
                         <div>
                           <span className="text-xs font-bold text-slate-800">
                             {formatFeeType(p.fee_type || p.feeType)}
                           </span>
-                          <span className="text-[11px] text-slate-400 block">
-                            App #{p.application_id || p.applicationId || "-"}
+                          <span className="text-[11px] text-slate-400 block font-mono">
+                            Record ID: #{p.id}
+                            {p.application_id || p.applicationId ? ` • App #${p.application_id || p.applicationId}` : ""}
                           </span>
                         </div>
                         <div className="text-right">
@@ -253,19 +238,29 @@ export default function PaymentHistoryModal({
                         </div>
                         <div>
                           <span className="text-slate-400 text-[11px] block">Status</span>
-                          <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${badge.bg}`}
-                          >
-                            {badge.icon}
-                            {badge.text}
-                          </span>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${badge.bg}`}
+                            >
+                              {badge.icon}
+                              {badge.text}
+                            </span>
+                          </div>
                         </div>
-                        <div className="col-span-2">
-                          <span className="text-slate-400 text-[11px] block">Created At</span>
-                          <span className="text-slate-600 text-xs flex items-center gap-1">
+                        <div className="col-span-2 flex items-center justify-between pt-2 border-t border-slate-100">
+                          <span className="text-slate-500 text-xs flex items-center gap-1">
                             <Calendar className="w-3.5 h-3.5 text-slate-400" />
                             {formatDate(p.created_at || p.createdAt)}
                           </span>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenStatusModal(p)}
+                            className="px-3 py-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200 hover:border-blue-300 rounded-lg flex items-center gap-1.5 cursor-pointer transition-all shadow-xs"
+                            title="Update Payment Record Status"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                            Update Status
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -291,49 +286,62 @@ export default function PaymentHistoryModal({
         </div>
       </div>
 
-      {/* Confirmation Modal */}
-      {confirmModal.isOpen && (
+      {/* Update Payment Record Status Modal */}
+      {statusModal.isOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-60 p-4 animate-in fade-in duration-150">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-sm w-full p-5 space-y-4">
             <div>
               <h4 className="text-sm font-bold text-slate-900">
-                Confirm Status Update
+                Update Payment Record Status
               </h4>
-              <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">
-                Are you sure you want to update the payment status for{" "}
-                <strong className="text-slate-800 font-semibold">
-                  {customer?.fullName || customer?.name || "Customer"}
-                </strong>{" "}
-                (App #{
-                  paymentList.find((p) => p.application_id || p.applicationId)?.application_id ||
-                  paymentList.find((p) => p.application_id || p.applicationId)?.applicationId ||
-                  customer?.applicationId ||
-                  customer?.application_id ||
-                  "-"
-                }) to{" "}
-                <span className="font-bold text-emerald-600 uppercase">
-                  {confirmModal.newStatus}
-                </span>
-                ?
+              <p className="text-xs text-slate-500 mt-1">
+                Record ID: <strong className="font-mono text-slate-700">#{statusModal.paymentRecord?.id}</strong>
+                {statusModal.paymentRecord?.amount && (
+                  <span> • ₹{Number(statusModal.paymentRecord.amount).toLocaleString("en-IN")}</span>
+                )}
               </p>
             </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-700">
+                Select New Status:
+              </label>
+              <select
+                value={statusModal.status}
+                onChange={(e) => setStatusModal((prev) => ({ ...prev, status: e.target.value }))}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 cursor-pointer"
+              >
+                {PAYMENT_STATUS_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <p className="text-xs text-slate-600 bg-blue-50/60 border border-blue-100 p-2.5 rounded-xl">
+              Are you sure you want to change status to{" "}
+              <strong className="text-blue-600 font-bold">
+                {PAYMENT_STATUS_OPTIONS.find((o) => o.value === statusModal.status)?.label || statusModal.status}
+              </strong>?
+            </p>
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
               <button
                 type="button"
-                disabled={confirmModal.loading}
-                onClick={() => setConfirmModal({ isOpen: false, newStatus: "", loading: false })}
+                disabled={statusModal.loading}
+                onClick={() => setStatusModal({ isOpen: false, paymentRecord: null, status: "pending", loading: false })}
                 className="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-all cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                disabled={confirmModal.loading}
+                disabled={statusModal.loading}
                 onClick={handleConfirmStatusUpdate}
-                className="px-4 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className="px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
-                {confirmModal.loading ? (
+                {statusModal.loading ? (
                   <>
                     <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     <span>Updating...</span>

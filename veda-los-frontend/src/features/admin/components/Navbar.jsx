@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Bell, ChevronDown, Menu, Plus, Check } from "lucide-react";
-import logo from "../../../assets/veda_housing_finance.jpeg";
+import logo from "../../../assets/Dhanicap_Logo.png";
 import { toast } from "react-toastify";
 
 export default function Navbar({
@@ -125,15 +125,15 @@ export default function Navbar({
           <div className="flex items-center gap-2.5 min-w-0">
             <img
               src={logo}
-              alt="Veda Finance Logo"
-              className="w-12 h-12 object-contain rounded-xl bg-white p-0.5 border border-slate-200 shadow-xs shrink-0"
+              alt="Dhanicap Logo"
+              className="w-14 h-14 object-contain rounded-xl shrink-0"
             />
             <div className="min-w-0">
               <span className="font-extrabold text-xs tracking-wide text-[#0a182e] block leading-tight truncate">
-                VEDA FINANCE
+                DHANICAP
               </span>
               <span className="block text-[9px] text-[#f26e21] font-extrabold tracking-widest uppercase truncate">
-                Housing Finance
+                Finance
               </span>
             </div>
           </div>
@@ -377,7 +377,7 @@ export default function Navbar({
 
             {showProfileMenu && (
               <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1 text-sm">
-                <div className="px-4 py-2 border-b border-slate-100 font-medium text-slate-500 text-xs">Veda Finance</div>
+                <div className="px-4 py-2 border-b border-slate-100 font-medium text-slate-500 text-xs">DHANICAP Finance</div>
                 {onSetup && (
                   <button
                     onClick={() => {
