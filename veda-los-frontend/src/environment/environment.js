@@ -55,6 +55,9 @@ export const environment = {
     ReadAllNotifications: 'notifications/read-all',
     
 
+    //Download EXCEL reports
+    DownloadAdminReports: 'reports/export'
+
  
 
 

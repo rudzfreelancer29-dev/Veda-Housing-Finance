@@ -218,6 +218,13 @@ export default function Manager({ onLogout }) {
       toast.warn("Mobile Number is mandatory");
       return;
     }
+    if (newCustForm.loanRequirementDetails?.trim()) {
+      const numVal = Number(newCustForm.loanRequirementDetails.trim());
+      if (isNaN(numVal) || numVal < 0) {
+        toast.warn("Loan Requirement must be a valid numeric amount");
+        return;
+      }
+    }
 
     setRegisterLoading(true);
     try {
@@ -237,7 +244,8 @@ export default function Manager({ onLogout }) {
       toast.success("Customer registered successfully!");
 
       const resData = response?.data?.customer || response?.data?.data || response?.data;
-      const newId = resData?.id || resData?.customerId || `CUST-${100 + customers.length + 1}`;
+      const rawId = resData?.id || resData?.customerId;
+      const refId = resData?.reference_id || resData?.referenceId || (rawId ? `CUST-${rawId}` : `CUST-${100 + customers.length + 1}`);
 
       // If monthlyIncome and loanRequirementDetails aren't filled, leave loanReq empty
       let loanReqValue = "";
@@ -250,7 +258,9 @@ export default function Manager({ onLogout }) {
       }
 
       const newCust = {
-        id: newId,
+        id: refId,
+        rawId: rawId,
+        referenceId: resData?.reference_id || resData?.referenceId || refId,
         name: payload.fullName,
         fullName: payload.fullName,
         mobile: payload.mobileNumber,
@@ -271,7 +281,7 @@ export default function Manager({ onLogout }) {
       setApplications(prev => [
         {
           id: `APP-${500 + prev.length + 1}`,
-          customerId: newId,
+          customerId: refId,
           customerName: newCust.name,
           amount: newCust.loanReq,
           stage: "New Registered",
@@ -281,7 +291,8 @@ export default function Manager({ onLogout }) {
       ]);
 
       setNewCustForm(INITIAL_CUSTOMER_FORM);
-      setActiveModal(null);
+      setSelectedCustomer(newCust);
+      setActiveModal("docUpload");
       await fetchCustomers();
     } catch (error) {
       console.error("Error registering customer:", error);
@@ -324,6 +335,13 @@ export default function Manager({ onLogout }) {
     if (!editCustForm.mobileNumber?.trim()) {
       toast.warn("Mobile Number is mandatory");
       return;
+    }
+    if (editCustForm.loanRequirementDetails?.trim()) {
+      const numVal = Number(editCustForm.loanRequirementDetails.trim());
+      if (isNaN(numVal) || numVal < 0) {
+        toast.warn("Loan Requirement must be a valid numeric amount");
+        return;
+      }
     }
 
     setUpdateLoading(true);
@@ -479,7 +497,7 @@ export default function Manager({ onLogout }) {
           notifications={notifications}
           onMarkNotificationsRead={() => setNotifications(notifications.map(n => ({ ...n, read: true })))}
           user={{ name: "David Fhone", role: "Loan Operations Manager", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100" }}
-          onLogout={onLogout || (() => window.location.href = "/login")}
+          onLogout={onLogout || (() => { sessionStorage.clear(); localStorage.clear(); window.location.href = "/login"; })}
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         />
 

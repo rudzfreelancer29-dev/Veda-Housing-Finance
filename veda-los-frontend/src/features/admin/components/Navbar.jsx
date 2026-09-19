@@ -56,15 +56,15 @@ export default function Navbar({
 
   function AdminName() {
     try {
-      // 1. Read name from the JSON 'user' object stored during login
-      const userStr = localStorage.getItem("user");
+      // 1. Read name from JSON 'user' in sessionStorage or localStorage
+      const userStr = sessionStorage.getItem("user") || localStorage.getItem("user");
       if (userStr) {
         const userObj = JSON.parse(userStr);
         if (userObj?.name) return userObj.name;
       }
 
       // 2. Fallback: Decode user name directly from JWT token payload
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token") || localStorage.getItem("token");
       if (token) {
         const payloadBase64 = token.split(".")[1];
         if (payloadBase64) {
@@ -75,13 +75,14 @@ export default function Navbar({
         }
       }
     } catch (err) {
-      console.error("Error reading admin name from localStorage:", err);
+      console.error("Error reading admin name:", err);
     }
     return user?.name || "Administrator";
   }
 
   function onLogout(){
     try {
+      sessionStorage.clear();
       localStorage.clear();
       toast.success("Logout successful");
       window.location.href = "/login";
@@ -129,10 +130,10 @@ export default function Navbar({
               className="w-14 h-14 object-contain rounded-xl shrink-0"
             />
             <div className="min-w-0">
-              <span className="font-extrabold text-xs tracking-wide text-[#0a182e] block leading-tight truncate">
+              <span className="font-black text-xs tracking-widest text-[#B38728] block leading-tight truncate">
                 DHANICAP
               </span>
-              <span className="block text-[9px] text-[#f26e21] font-extrabold tracking-widest uppercase truncate">
+              <span className="block text-[9px] text-[#64748b] font-bold tracking-[0.22em] uppercase truncate">
                 Finance
               </span>
             </div>
