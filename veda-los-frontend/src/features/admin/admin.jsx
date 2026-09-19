@@ -74,7 +74,7 @@ const INITIAL_APPLICATIONS = [
     { id: "APP-308", customerId: "CUST-6677", customerName: "Meera Nair", amount: 1200000, manager: "John Smith", status: "Rejected", date: "2026-08-28" }
 ];
 
-export default function Admin() {
+export default function Admin({ onLogout }) {
     const [activeTab, setActiveTab] = useState("Dashboard");
     const [managers, setManagers] = useState(INITIAL_MANAGERS);
     const [auditLogs, setAuditLogs] = useState(INITIAL_AUDIT_LOGS);
@@ -548,7 +548,7 @@ export default function Admin() {
                     onNotificationClick={handleOpenNotificationModal}
                     onReadNotification={handleReadNotification}
                     onMarkNotificationsRead={handleMarkAllNotificationsRead}
-                    onLogout={() => alert("Logging out (Mock)")}
+                    onLogout={onLogout || (() => { sessionStorage.clear(); localStorage.clear(); window.location.href = "/login"; })}
                     onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
                 />
 
