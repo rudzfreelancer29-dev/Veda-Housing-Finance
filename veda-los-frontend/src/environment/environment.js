@@ -1,5 +1,5 @@
 export const environment = {
-    CRMService_API: 'http://localhost:5000/api/',
+    CRMService_API: 'http://localhost:5170/api/',
     
     //Auth
     Login: 'auth/login',
