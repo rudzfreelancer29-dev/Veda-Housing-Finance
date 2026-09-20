@@ -59,7 +59,7 @@ export default function Sidebar({
               <img
                 src={logo}
                 alt="Dhanicap Logo"
-                className={`w-[85px] h-[85px] object-contain rounded-xl shrink-0 transition-all duration-300 ${
+                className={`w-[85px] h-[85px] object-contain shrink-0 transition-all duration-300 ${
                   isCollapsed ? "group-hover:scale-105" : ""
                 }`}
               />
@@ -68,8 +68,8 @@ export default function Sidebar({
                   isCollapsed ? "max-w-0 opacity-0 pointer-events-none" : "max-w-[160px] opacity-100"
                 }`}
               >
-                <span className="font-extrabold text-base tracking-wide text-white block leading-tight truncate">DHANICAP</span>
-                <span className="block text-[11px] text-[#f26e21] font-extrabold tracking-widest uppercase mt-0.5 truncate"> Finance</span>
+                <span className="font-black text-base tracking-widest text-[#B38728] block leading-tight truncate">DHANICAP</span>
+                <span className="block text-[14px] text-slate-400  tracking-[0.22em] uppercase mt-0.5 truncate">Finance</span>
               </div>
             </div>
 
