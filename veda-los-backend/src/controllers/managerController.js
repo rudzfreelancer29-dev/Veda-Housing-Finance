@@ -11,9 +11,9 @@ async function listManagers(req, res) {
 }
 
 async function createManager(req, res) {
-  const { name, email, password } = req.body;
-  if (!name || !email || !password) {
-    return res.status(400).json({ message: "name, email and password are required" });
+  const { name, email, mobile_number, password } = req.body;
+  if (!name || !email || !mobile_number || !password) {
+    return res.status(400).json({ message: "name, email, mobile_number and password are required" });
   }
   if (password.length < 8) {
     return res.status(400).json({ message: "Password must be at least 8 characters" });
@@ -21,7 +21,7 @@ async function createManager(req, res) {
 
   const passwordHash = await bcrypt.hash(password, 10);
   try {
-    const manager = await managerModel.create({ name, email, passwordHash });
+    const manager = await managerModel.create({ name, email, mobile_number, passwordHash });
     await auditLogModel.record({
       userId: req.user.id,
       action: "create_manager",
@@ -76,7 +76,7 @@ async function setManagerStatus(req, res) {
 }
 
 async function deleteManager(req, res) {
-  // Fetch details first — once deleted, the row is gone, and the audit
+  // Fetch details first â€” once deleted, the row is gone, and the audit
   // log needs to say *who* was deleted, not just "manager id=5".
   const manager = await managerModel.findById(req.params.id);
   if (!manager) return res.status(404).json({ message: "Manager not found" });

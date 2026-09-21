@@ -5,6 +5,7 @@ const auditLogModel = require("../models/auditLogModel");
 const { sendEmail } = require("../utils/mailer");
 const { sendSms } = require("../utils/sms");
 const cashfree = require("../utils/cashfree");
+const { paymentRequestEmail, paymentReceiptEmail } = require("../utils/emailTemplates");
 
 async function assertAccessToCustomer(customerId, user) {
   const customer = await customerModel.findById(customerId);
@@ -47,17 +48,26 @@ async function createPaymentRequest(req, res) {
     action: "create_payment_request",
     entity: "payments",
     entityId: payment.id,
-    details: `Payment request of ₹${amount} (${feeType || "processing_fee"}) for ${customer.full_name}`,
+    details: `Payment request of â‚¹${amount} (${feeType || "processing_fee"}) for ${customer.full_name}`,
   });
+
+  const paymentUrl = process.env.PAYMENT_PAGE_URL
+    ? `${process.env.PAYMENT_PAGE_URL}?order_id=${encodeURIComponent(orderId)}`
+    : null;
 
   if (customer.email) {
     await sendEmail({
       to: customer.email,
-      subject: "Payment Request - Veda Finance",
-      html: `<p>Dear ${customer.full_name},</p>
-             <p>Please complete a payment of ₹${amount} to proceed with your loan application (Ref: ${customer.reference_id}).</p>`,
+      subject: `Payment request for application ${customer.reference_id}`,
+      html: paymentRequestEmail({
+        customerName: customer.full_name,
+        referenceId: customer.reference_id,
+        amount,
+        paymentUrl,
+      }),
     });
   }
+
   await sendSms({
     to: customer.mobile_number,
     message: `Dear ${customer.full_name}, please complete a payment of Rs.${amount} for your Veda Finance application ${customer.reference_id}.`,
@@ -109,12 +119,17 @@ async function sendPaymentConfirmation(payment) {
   if (customer.email) {
     await sendEmail({
       to: customer.email,
-      subject: "Payment Receipt - Veda Finance",
-      html: `<p>Dear ${customer.full_name},</p>
-             <p>We have received your payment of ₹${payment.amount} for application ${customer.reference_id}.</p>
-             <p>Receipt No: PAY-${payment.id} | Date: ${new Date(payment.updated_at || payment.created_at).toLocaleDateString("en-IN")}</p>`,
+      subject: `Payment received — receipt PAY-${payment.id}`,
+      html: paymentReceiptEmail({
+        customerName: customer.full_name,
+        referenceId: customer.reference_id,
+        paymentId: payment.id,
+        amount: payment.amount,
+        paymentDate: payment.updated_at || payment.created_at,
+      }),
     });
   }
+
   await sendSms({
     to: customer.mobile_number,
     message: `Dear ${customer.full_name}, payment of Rs.${payment.amount} received for ${customer.reference_id}. Thank you!`,

@@ -3,27 +3,45 @@ const customerModel = require("../models/customerModel");
 const auditLogModel = require("../models/auditLogModel");
 const { sendEmail } = require("../utils/mailer");
 const { sendSms } = require("../utils/sms");
+const { eligibilityEmail, statusUpdateEmail } = require("../utils/emailTemplates");
 
 // PDF Section 7: "Eligibility Notification" and "Application Status
-// Updates" — sent to the customer whenever their application status
+// Updates" â€” sent to the customer whenever their application status
 // changes, regardless of whether a Super Admin or a Manager made the change.
 async function notifyCustomerOfStatusChange(customerId, status) {
   const customer = await customerModel.findById(customerId);
   if (!customer) return;
 
   const isEligible = status === "eligible";
-  const subject = isEligible ? "You're Eligible! - Veda Finance" : "Application Status Update - Veda Finance";
+  const subject = isEligible
+    ? `Congratulations ${customer.full_name} — your application is eligible`
+    : `Application update for ${customer.reference_id}`;
+
   const message = isEligible
     ? `Congratulations ${customer.full_name}! Your loan application (Ref: ${customer.reference_id}) is eligible for processing.`
     : `Dear ${customer.full_name}, your application (Ref: ${customer.reference_id}) status has been updated to: ${status.replace(/_/g, " ")}.`;
 
   if (customer.email) {
-    await sendEmail({ to: customer.email, subject, html: `<p>${message}</p>` });
+    await sendEmail({
+      to: customer.email,
+      subject,
+      html: isEligible
+        ? eligibilityEmail({
+            customerName: customer.full_name,
+            referenceId: customer.reference_id,
+          })
+        : statusUpdateEmail({
+            customerName: customer.full_name,
+            referenceId: customer.reference_id,
+            status,
+          }),
+    });
   }
+
   await sendSms({ to: customer.mobile_number, message });
 }
 
-// Super Admin override — can change the status of ANY application (PDF
+// Super Admin override â€” can change the status of ANY application (PDF
 // Section 2.1: "view and manage all customer applications").
 async function updateApplicationStatus(req, res) {
   const { status } = req.body;
@@ -49,7 +67,7 @@ async function updateApplicationStatus(req, res) {
   res.json(application);
 }
 
-// Manager's own scoped version — PDF Section 2.2: "Update customer
+// Manager's own scoped version â€” PDF Section 2.2: "Update customer
 // application stages", restricted to applications assigned to them.
 async function updateMyApplicationStatus(req, res) {
   const { status } = req.body;

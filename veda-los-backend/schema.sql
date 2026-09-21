@@ -1,10 +1,11 @@
 -- Veda Finance | Loan Origination System (LOS) & CRM
--- Users table — Super Admin + Manager roles only
+-- Users table â€” Super Admin + Manager roles only
 
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     name VARCHAR(120) NOT NULL,
     email VARCHAR(160) UNIQUE NOT NULL,
+    mobile_number VARCHAR(20),
     password_hash VARCHAR(255) NOT NULL,
     role VARCHAR(20) NOT NULL DEFAULT 'manager' CHECK (
         role IN ('super_admin', 'manager')
@@ -17,7 +18,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 
--- Customer Registration Module (PDF Section 3) — CIBIL/Credit Bureau fields
+-- Customer Registration Module (PDF Section 3) â€” CIBIL/Credit Bureau fields
 -- intentionally excluded per client instruction.
 CREATE TABLE IF NOT EXISTS customers (
     id SERIAL PRIMARY KEY,
@@ -36,7 +37,7 @@ CREATE TABLE IF NOT EXISTS customers (
 );
 
 -- Customer Application Management (PDF Section 4). Status list matches the
--- PDF exactly, minus "CIBIL Checked" (excluded — no credit bureau in scope).
+-- PDF exactly, minus "CIBIL Checked" (excluded â€” no credit bureau in scope).
 CREATE TABLE IF NOT EXISTS applications (
     id SERIAL PRIMARY KEY,
     customer_id INTEGER NOT NULL REFERENCES customers (id) ON DELETE CASCADE,
@@ -59,7 +60,7 @@ CREATE TABLE IF NOT EXISTS applications (
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
--- Payment Management Module (PDF Section 6) — tracking only for now; the
+-- Payment Management Module (PDF Section 6) â€” tracking only for now; the
 -- Manager-side "create/collect payment" API comes in a later phase.
 CREATE TABLE IF NOT EXISTS payments (
     id SERIAL PRIMARY KEY,
@@ -131,3 +132,5 @@ ADD COLUMN IF NOT EXISTS gateway_payment_id VARCHAR(120);
 
 ALTER TABLE payments
 ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NOT NULL DEFAULT NOW();
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS mobile_number VARCHAR(20);
