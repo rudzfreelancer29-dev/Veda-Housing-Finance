@@ -13,7 +13,7 @@ const applicationRoutes = require("./routes/applications");
 const paymentRoutes = require("./routes/payments");
 const reportRoutes = require("./routes/reports");
 const auditLogRoutes = require("./routes/auditLogs");
-const notificationRoutes = require("./routes/notifications");
+const notificationRoutes = require("./routes/notifications"); 
 
 const app = express();
 
@@ -59,5 +59,5 @@ app.use("/api/reports", reportRoutes);
 app.use("/api/audit-logs", auditLogRoutes);
 app.use("/api/notifications", notificationRoutes);
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5170;
 app.listen(PORT, () => console.log(`Veda LOS & CRM API running on http://localhost:${PORT}`));

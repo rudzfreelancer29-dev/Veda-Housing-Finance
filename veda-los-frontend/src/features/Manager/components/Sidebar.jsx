@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import logo from "../../../assets/veda_housing_finance.jpeg";
+import logo from "../../../assets/Dhanicap_Logo.png";
 import { X, Menu } from "lucide-react";
 
 export default function Sidebar({
@@ -58,9 +58,9 @@ export default function Sidebar({
             >
               <img
                 src={logo}
-                alt="Veda Finance Logo"
-                className={`w-[70px] h-[70px] object-contain rounded-xl bg-white p-1 border border-slate-700/50 shadow-inner shrink-0 transition-all duration-300 ${
-                  isCollapsed ? "group-hover:scale-105 group-hover:border-[#f26e21]" : ""
+                alt="Dhanicap Logo"
+                className={`w-[85px] h-[85px] object-contain shrink-0 transition-all duration-300 ${
+                  isCollapsed ? "group-hover:scale-105" : ""
                 }`}
               />
               <div
@@ -68,8 +68,8 @@ export default function Sidebar({
                   isCollapsed ? "max-w-0 opacity-0 pointer-events-none" : "max-w-[160px] opacity-100"
                 }`}
               >
-                <span className="font-extrabold text-base tracking-wide text-white block leading-tight truncate">VEDA FINANCE</span>
-                <span className="block text-[11px] text-[#f26e21] font-extrabold tracking-widest uppercase mt-0.5 truncate">Housing Finance</span>
+                <span className="font-black text-base tracking-widest text-[#B38728] block leading-tight truncate">DHANICAP</span>
+                <span className="block text-[14px] text-slate-400  tracking-[0.22em] uppercase mt-0.5 truncate">Finance</span>
               </div>
             </div>
 

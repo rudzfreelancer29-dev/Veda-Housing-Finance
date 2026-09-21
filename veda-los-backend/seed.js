@@ -70,7 +70,7 @@ async function seed() {
          VALUES ($1, $2, 'customers', $3)`,
         [managerId, `Manager Priya registered a new customer: ${c.name}`, id]
       );
-    }
+    } 
     console.log("Seeded 4 sample customers with applications and admin notifications.");
   } else {
     console.log("Customers already exist, skipping sample data.");

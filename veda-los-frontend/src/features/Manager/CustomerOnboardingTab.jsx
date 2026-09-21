@@ -207,17 +207,6 @@ export default function CustomerOnboardingTab({
                       onClick={(e) => {
                         e.stopPropagation();
                         onSelectCustomer(cust);
-                        onOpenModal("notify");
-                      }}
-                      title="Send Notification"
-                      className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg cursor-pointer"
-                    >
-                      <Send className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSelectCustomer(cust);
                         onSetPaymentAmount(
                           cust.income || cust.loanReq
                             ? (Number(cust.loanReq) || Number(cust.income) * 10) * 0.01

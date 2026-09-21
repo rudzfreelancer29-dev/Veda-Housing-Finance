@@ -1,5 +1,5 @@
 export const environment = {
-    CRMService_API: 'http://localhost:5000/api/',
+    CRMService_API: 'http://localhost:5170/api/',
     
     //Auth
     Login: 'auth/login',
@@ -54,6 +54,9 @@ export const environment = {
     ReadNotificationsById: 'notifications/',
     ReadAllNotifications: 'notifications/read-all',
     
+
+    //Download EXCEL reports
+    DownloadAdminReports: 'reports/export'
 
  
 

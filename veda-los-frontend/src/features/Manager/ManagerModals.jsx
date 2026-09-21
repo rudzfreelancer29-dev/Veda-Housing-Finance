@@ -133,20 +133,30 @@ export function RegisterCustomerModal({
             <div>
               <label className="text-xs font-semibold text-slate-700">Monthly Income (₹)</label>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 placeholder="e.g. 55000"
                 value={newCustForm.monthlyIncome}
-                onChange={e => setNewCustForm({ ...newCustForm, monthlyIncome: e.target.value })}
+                onChange={e => {
+                  const val = e.target.value.replace(/\D/g, "");
+                  setNewCustForm({ ...newCustForm, monthlyIncome: val });
+                }}
                 className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-700">Loan Requirement Details</label>
+              <label className="text-xs font-semibold text-slate-700">Loan Requirement (₹)</label>
               <input
                 type="text"
-                placeholder="e.g. Personal loan for home renovation"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder="e.g. 500000"
                 value={newCustForm.loanRequirementDetails}
-                onChange={e => setNewCustForm({ ...newCustForm, loanRequirementDetails: e.target.value })}
+                onChange={e => {
+                  const val = e.target.value.replace(/\D/g, "");
+                  setNewCustForm({ ...newCustForm, loanRequirementDetails: val });
+                }}
                 className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -410,20 +420,30 @@ export function EditCustomerModal({
             <div>
               <label className="text-xs font-semibold text-slate-700">Monthly Income (₹)</label>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 placeholder="e.g. 55000"
                 value={editCustForm.monthlyIncome}
-                onChange={e => setEditCustForm({ ...editCustForm, monthlyIncome: e.target.value })}
+                onChange={e => {
+                  const val = e.target.value.replace(/\D/g, "");
+                  setEditCustForm({ ...editCustForm, monthlyIncome: val });
+                }}
                 className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-700">Loan Requirement Details</label>
+              <label className="text-xs font-semibold text-slate-700">Loan Requirement (₹)</label>
               <input
                 type="text"
-                placeholder="e.g. Personal loan for home renovation"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder="e.g. 500000"
                 value={editCustForm.loanRequirementDetails}
-                onChange={e => setEditCustForm({ ...editCustForm, loanRequirementDetails: e.target.value })}
+                onChange={e => {
+                  const val = e.target.value.replace(/\D/g, "");
+                  setEditCustForm({ ...editCustForm, loanRequirementDetails: val });
+                }}
                 className="w-full mt-1 px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               />
             </div>

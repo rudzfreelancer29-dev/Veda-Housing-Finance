@@ -3,10 +3,10 @@ import PropTypes from "prop-types";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle, Loader2, X, Send, KeyRound } from "lucide-react";
 import { toast } from "react-toastify";
 import loginImg from "../assets/login_page_img.webp";
-import logo from "../assets/veda_housing_finance.jpeg";
+import logo from "../assets/Dhanicap_Logo.png";
 import apiService from "../services/api-service"; // Prefer pre-instantiated singleton
 
-const ROLES = ["Admin", "Manager", "Customer"];
+const ROLES = ["Admin", "Manager"];
 
 export default function Login({ onLogin, onNavigateRegister, onForgotPassword }) {
     const [formData, setFormData] = useState({
@@ -62,10 +62,10 @@ export default function Login({ onLogin, onNavigateRegister, onForgotPassword })
     };
 
     const handleRoleClick = (role) => {
-        if (role === "Customer") {
-            toast.info("Customer portal is under development. Please log in as Admin or Manager.");
-            return;
-        }
+        // if (role === "Customer") {
+        //     toast.info("Customer portal is under development. Please log in as Admin or Manager.");
+        //     return;
+        // }
         handleChange("role", role);
     };
 
@@ -105,13 +105,22 @@ export default function Login({ onLogin, onNavigateRegister, onForgotPassword })
                 }
             }
 
-            // Store auth token and user details in localStorage (token valid for 8h)
+            // Store auth token and user details in sessionStorage (tab-isolated) and localStorage if rememberMe is enabled
             if (response.data?.token) {
-                localStorage.setItem("token", response.data.token);
-                localStorage.setItem("token_expiry", (Date.now() + 8 * 60 * 60 * 1000).toString());
+                const expiry = (Date.now() + 8 * 60 * 60 * 1000).toString();
+                sessionStorage.setItem("token", response.data.token);
+                sessionStorage.setItem("token_expiry", expiry);
+                if (formData.rememberMe) {
+                    localStorage.setItem("token", response.data.token);
+                    localStorage.setItem("token_expiry", expiry);
+                }
             }
             if (response.data?.user) {
-                localStorage.setItem("user", JSON.stringify(response.data.user));
+                const userStr = JSON.stringify(response.data.user);
+                sessionStorage.setItem("user", userStr);
+                if (formData.rememberMe) {
+                    localStorage.setItem("user", userStr);
+                }
             }
 
             toast.success(`${formData.role} login successful! Redirecting...`, {
@@ -183,15 +192,15 @@ export default function Login({ onLogin, onNavigateRegister, onForgotPassword })
                         <div className="flex items-center gap-3.5 mb-8">
                             <img
                                 src={logo}
-                                alt="Veda Finance Logo"
-                                className="w-14 h-14 object-contain rounded-xl bg-white p-1 border border-slate-200 shadow-sm shrink-0"
+                                alt="Dhanicap Finance Logo"
+                                className="w-24 h-24 object-contain shrink-0"
                             />
                             <div>
-                                <span className="font-extrabold text-lg tracking-wide text-[#0a182e] block leading-tight">
-                                    VEDA FINANCE
+                                <span className="font-black text-xl tracking-widest text-[#B38728] block leading-tight">
+                                    DHANICAP
                                 </span>
-                                <span className="block text-[11px] text-[#f26e21] font-extrabold tracking-widest uppercase">
-                                    Housing Finance
+                                <span className="block text-[11px] text-[#64748b] font-bold tracking-[0.25em] uppercase">
+                                    Finance
                                 </span>
                             </div>
                         </div>
@@ -213,8 +222,8 @@ export default function Login({ onLogin, onNavigateRegister, onForgotPassword })
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
                                     Select Portal / Role
                                 </label>
-                                <div className="grid grid-cols-3 gap-1.5 bg-slate-100 p-1.5 rounded-xl border border-slate-200/60">
-                                    {["Admin", "Manager", "Customer"].map((role) => (
+                                <div className="grid grid-cols-2 gap-1.5 bg-slate-100 p-1.5 rounded-xl border border-slate-200/60">
+                                    {["Admin", "Manager"].map((role) => (
                                         <button
                                             key={role}
                                             type="button"

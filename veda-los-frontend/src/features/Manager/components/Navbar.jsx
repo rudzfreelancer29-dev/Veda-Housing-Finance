@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Bell, ChevronDown, Menu, Plus } from "lucide-react";
-import logo from "../../../assets/veda_housing_finance.jpeg";
+import logo from "../../../assets/Dhanicap_Logo.png";
 import { toast } from "react-toastify";
 
 export default function Navbar({
@@ -24,23 +24,23 @@ export default function Navbar({
   const notificationsRef = useRef(null);
 
   function getUserName() {
-  try {
-    // 1. Check localStorage "user"
-    const user = JSON.parse(localStorage.getItem("user") || "null");
-    if (user?.name) return user.name;
+    try {
+      // 1. Check sessionStorage / localStorage "user"
+      const user = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "null");
+      if (user?.name) return user.name;
 
-    // 2. Fallback to JWT payload
-    const token = localStorage.getItem("token")?.split(".")[1];
-    if (token) {
-      const payload = JSON.parse(atob(token.replace(/-/g, "+").replace(/_/g, "/")));
-      return payload?.name || payload?.user?.name || "Manager";
+      // 2. Fallback to JWT payload
+      const token = (sessionStorage.getItem("token") || localStorage.getItem("token"))?.split(".")[1];
+      if (token) {
+        const payload = JSON.parse(atob(token.replace(/-/g, "+").replace(/_/g, "/")));
+        return payload?.name || payload?.user?.name || "Manager";
+      }
+    } catch (err) {
+      console.error("Error reading user name:", err);
     }
-  } catch (err) {
-    console.error("Error reading user name:", err);
-  }
 
-  return "Manager";
-}
+    return "Manager";
+  }
 
   const getInitials = (name, fallback = "M") => {
     if (!name) return fallback;
@@ -51,16 +51,17 @@ export default function Navbar({
     return name.slice(0, 2).toUpperCase();
   };
 
-function onLogout(){
-  try {
-    localStorage.clear();
-    toast.success("Logout successful");
-    window.location.href = "/login";
-  } catch (err) {
-    console.error("Logout error:", err);
-    toast.error("Logout failed");
+  function onLogout(){
+    try {
+      sessionStorage.clear();
+      localStorage.clear();
+      toast.success("Logout successful");
+      window.location.href = "/login";
+    } catch (err) {
+      console.error("Logout error:", err);
+      toast.error("Logout failed");
+    }
   }
-}
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -93,15 +94,15 @@ function onLogout(){
           <div className="flex items-center gap-2.5 min-w-0">
             <img
               src={logo}
-              alt="Veda Finance Logo"
-              className="w-12 h-12 object-contain rounded-xl bg-white p-0.5 border border-slate-200 shadow-xs shrink-0"
+              alt="Dhanicap Logo"
+              className="w-14 h-14 object-contain rounded-xl shrink-0"
             />
             <div className="min-w-0">
-              <span className="font-extrabold text-xs tracking-wide text-[#0a182e] block leading-tight truncate">
-                VEDA FINANCE
+              <span className="font-black text-xs tracking-widest text-[#B38728] block leading-tight truncate">
+                DHANICAP
               </span>
-              <span className="block text-[9px] text-[#f26e21] font-extrabold tracking-widest uppercase truncate">
-                Housing Finance
+              <span className="block text-[9px] text-[#64748b] font-bold tracking-[0.22em] uppercase truncate">
+                Finance
               </span>
             </div>
           </div>
@@ -226,7 +227,7 @@ function onLogout(){
           )}
 
           {/* Notifications */}
-          <div className="relative" ref={notificationsRef}>
+          {/* <div className="relative" ref={notificationsRef}>
             <button
               onClick={() => setShowNotifications(!showNotifications)}
               className="w-9 h-9 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full flex items-center justify-center relative transition-all cursor-pointer"
@@ -274,7 +275,7 @@ function onLogout(){
                 </div>
               </div>
             )}
-          </div>
+          </div> */}
 
           {/* Profile Dropdown */}
           <div className="relative" ref={profileRef}>
@@ -294,7 +295,7 @@ function onLogout(){
 
             {showProfileMenu && (
               <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1 text-sm">
-                <div className="px-4 py-2 border-b border-slate-100 font-medium text-slate-500 text-xs">Veda Finance</div>
+                <div className="px-4 py-2 border-b border-slate-100 font-medium text-slate-500 text-xs">Dhanicap Finance</div>
                 {onSetup && (
                   <button
                     onClick={() => {

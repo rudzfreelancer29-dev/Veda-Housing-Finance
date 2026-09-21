@@ -1,10 +1,9 @@
 import axios from "axios";
 import { environment } from "../environment/environment";
 
-// Add interceptor to automatically attach Authorization header if token exists in localStorage
 axios.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem("token");
+        const token = sessionStorage.getItem("token") || localStorage.getItem("token");
         if (token) {
             config.headers["Authorization"] = `Bearer ${token}`;
         }
@@ -148,6 +147,15 @@ class ApiService {
 
     ReadAllNotifications(){
         return axios.put(environment.CRMService_API + environment.ReadAllNotifications);
+    }
+
+
+    //Download EXCEL reports
+    DownloadAdminReports(params){
+        return axios.get(environment.CRMService_API + environment.DownloadAdminReports, {
+            params,
+            responseType: 'blob'
+        });
     }
 }
 
