@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { User, Mail, MapPin, Building, Hash, Lock, Eye, EyeOff, UserPlus } from "lucide-react";
 import loginImg from "../assets/login_page_img.webp";
-import logo from "../assets/veda_housing_finance.jpeg";
+import logo from "../assets/Dhanicap_Logo.png";
 
 export default function Register({ onRegister, onNavigateLogin }) {
     const [formData, setFormData] = useState({
@@ -48,15 +48,15 @@ export default function Register({ onRegister, onNavigateLogin }) {
                         <div className="flex items-center gap-3.5 mb-5">
                             <img
                                 src={logo}
-                                alt="Veda Finance Logo"
+                                alt="Dhanicap Finance Logo"
                                 className="w-12 h-12 object-contain rounded-xl bg-white p-1 border border-slate-200 shadow-sm shrink-0"
                             />
                             <div>
                                 <span className="font-extrabold text-lg tracking-wide text-[#0a182e] block leading-tight">
-                                    VEDA FINANCE
+                                    DHANICAP
                                 </span>
                                 <span className="block text-[11px] text-[#f26e21] font-extrabold tracking-widest uppercase">
-                                    Housing Finance
+                                    Finance
                                 </span>
                             </div>
                         </div>
@@ -67,7 +67,7 @@ export default function Register({ onRegister, onNavigateLogin }) {
                                 Create an Account
                             </h1>
                             <p className="text-slate-500 text-sm mt-1">
-                                Register as <span className="font-semibold text-[#f26e21]">{formData.role}</span> for Veda Housing Finance.
+                                Register as <span className="font-semibold text-[#f26e21]">{formData.role}</span> for Dhanicap Finance.
                             </p>
                         </div>
 
@@ -303,7 +303,7 @@ export default function Register({ onRegister, onNavigateLogin }) {
                     <div className="relative my-6 flex items-center justify-center">
                         <img
                             src={loginImg}
-                            alt="Veda Housing Finance Illustration"
+                            alt="Dhanicap Finance Illustration"
                             className="w-full max-h-72 object-contain"
                         />
                     </div>

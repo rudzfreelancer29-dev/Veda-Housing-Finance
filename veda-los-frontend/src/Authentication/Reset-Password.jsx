@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import PropTypes from "prop-types";
 import { Lock, Eye, EyeOff, ArrowRight, AlertCircle, ArrowLeft } from "lucide-react";
 import { toast } from "react-toastify";
-import logo from "../assets/veda_housing_finance.jpeg";
+import logo from "../assets/Dhanicap_Logo.png";
 import apiService from "../services/api-service";
 
 export default function ResetPassword({ onNavigateLogin, token: propToken }) {
@@ -103,14 +103,14 @@ export default function ResetPassword({ onNavigateLogin, token: propToken }) {
                 <div className="flex flex-col items-center justify-center text-center mb-6">
                     <img
                         src={logo}
-                        alt="Veda Housing Finance Logo"
+                        alt="Dhanicap Finance Logo"
                         className="w-16 h-16 object-contain rounded-xl bg-white p-1 border border-slate-200 shadow-sm mb-3"
                     />
                     <span className="font-extrabold text-lg tracking-wide text-[#0a182e] leading-tight">
-                        VEDA FINANCE
+                        DHANICAP
                     </span>
                     <span className="text-[11px] text-[#f26e21] font-extrabold tracking-widest uppercase">
-                        Housing Finance
+                        Finance
                     </span>
                 </div>
 
@@ -120,7 +120,7 @@ export default function ResetPassword({ onNavigateLogin, token: propToken }) {
                         Reset Password
                     </h1>
                     <p className="text-slate-500 text-xs mt-1 leading-relaxed">
-                        Create a new strong password for your Veda Finance account.
+                        Create a new strong password for your Dhanicap Finance account.
                     </p>
                 </div>
 

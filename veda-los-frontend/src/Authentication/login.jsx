@@ -370,7 +370,7 @@ export default function Login({ onLogin, onNavigateRegister, onForgotPassword })
                     <div className="relative my-6 flex items-center justify-center">
                         <img
                             src={loginImg}
-                            alt="Veda Housing Finance Illustration"
+                            alt="Dhanicap Finance Illustration"
                             className="w-full max-h-72 object-contain"
                         />
                     </div>

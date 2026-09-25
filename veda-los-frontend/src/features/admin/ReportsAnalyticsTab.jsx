@@ -536,7 +536,7 @@ export default function ReportsAnalyticsTab({
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
               Total Registrations
             </span>
-            <div className="w-9 h-9 rounded-xl bg-orange-50 text-[#f26e21] flex items-center justify-center shadow-xs">
+            <div className="w-9 h-9 rounded-xl bg-amber-50 text-[#B88728] flex items-center justify-center shadow-xs">
               <Users className="w-5 h-5" />
             </div>
           </div>
@@ -627,7 +627,7 @@ export default function ReportsAnalyticsTab({
         <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
-              <FileSpreadsheet className="w-5 h-5 text-[#f26e21]" />
+              <FileSpreadsheet className="w-5 h-5 text-[#B88728]" />
               Customer Registrations &amp; Loan Report
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -642,7 +642,7 @@ export default function ReportsAnalyticsTab({
               className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition-all cursor-pointer shadow-2xs disabled:opacity-60"
               title="Refresh Report Data"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-[#f26e21]" : ""}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-[#B88728]" : ""}`} />
               Refresh
             </button>
 
@@ -659,8 +659,8 @@ export default function ReportsAnalyticsTab({
                 </>
               ) : (
                 <>
-                  <Download className="w-3.5 h-3.5 text-[#B38728]" />
-                  <span>Export CSV / Excel</span>
+                  <Download className="w-3.5 h-3.5 text-[#B88728]" />
+                  <span>Export Excel</span>
                 </>
               )}
             </button>
@@ -673,7 +673,7 @@ export default function ReportsAnalyticsTab({
             {/* Timeline Presets Bar */}
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-[#f26e21]" />
+                <Calendar className="w-3.5 h-3.5 text-[#B88728]" />
                 Timeline:
               </span>
               <div className="flex items-center bg-slate-200/60 p-1 rounded-xl gap-0.5">
@@ -694,7 +694,7 @@ export default function ReportsAnalyticsTab({
                     }}
                     className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all shrink-0 cursor-pointer ${
                       dateFilter === preset.id
-                        ? "bg-[#f26e21] text-white shadow-xs"
+                        ? "bg-[#B88728] text-white shadow-xs"
                         : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
                     }`}
                   >

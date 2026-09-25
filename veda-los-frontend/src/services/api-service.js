@@ -117,20 +117,20 @@ class ApiService {
 
 
     //Dashboard Reports
-    GetAdminDashboard(){
-        return axios.get(environment.CRMService_API + environment.GetAdminDashboard);
+    GetAdminDashboard(params){
+        return axios.get(environment.CRMService_API + environment.GetAdminDashboard, { params });
     }
 
-    GetTotalRegistrations(){
-        return axios.get(`${environment.CRMService_API}${environment.GetTotalRegistrations}`);
+    GetTotalRegistrations(params){
+        return axios.get(`${environment.CRMService_API}${environment.GetTotalRegistrations}`, { params });
     }
 
-    GetPaymentsSummary(){
-        return axios.get(`${environment.CRMService_API}${environment.PaymentsSummary}`);
+    GetPaymentsSummary(params){
+        return axios.get(`${environment.CRMService_API}${environment.PaymentsSummary}`, { params });
     }
 
-    GetEligibilityStats(){
-        return axios.get(`${environment.CRMService_API}${environment.GetEligibilityStats}`);
+    GetEligibilityStats(params){
+        return axios.get(`${environment.CRMService_API}${environment.GetEligibilityStats}`, { params });
     }
 
     GetAuditLogs(){

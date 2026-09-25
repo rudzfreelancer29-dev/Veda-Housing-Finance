@@ -85,7 +85,7 @@ export default function NotificationModal({
                 Notification Details
               </h3>
               <p className="text-[11px] text-slate-500 font-medium">
-                Veda LOS • Real-time Notification
+                Dhanicap LOS • Real-time Notification
               </p>
             </div>
           </div>
