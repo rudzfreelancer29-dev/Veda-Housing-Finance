@@ -30,6 +30,30 @@ import ManagerCustomersModal from "./ManagerCustomersModal";
 import NotificationModal from "./NotificationModal";
 import apiService from "../../services/api-service";
 
+// Helper to get relative date string (YYYY-MM-DD)
+const getRelativeDate = (daysAgo = 0, hoursAgo = 0) => {
+    const d = new Date();
+    d.setDate(d.getDate() - daysAgo);
+    d.setHours(d.getHours() - hoursAgo);
+    return d.toISOString().slice(0, 10);
+};
+
+// Helper to get relative date time string
+const getRelativeDateTime = (daysAgo = 0, hoursAgo = 0) => {
+    const d = new Date();
+    d.setDate(d.getDate() - daysAgo);
+    d.setHours(d.getHours() - hoursAgo);
+    return d.toLocaleString("en-US", {
+        month: "short",
+        day: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true
+    });
+};
+
 // Initial Mock Data
 const INITIAL_MANAGERS = [
     { id: 1, name: "John Smith", email: "ashnafit@gmail.com", role: "Law", status: "active", applications: 18, avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100" },
@@ -43,35 +67,35 @@ const INITIAL_MANAGERS = [
 ];
 
 const INITIAL_AUDIT_LOGS = [
-    { id: 1, timestamp: "Nov 17, 2021 12:32:43 PM", manager: "Admin", action: "Action", details: "Active Application Manager" },
-    { id: 2, timestamp: "Mar 17, 2021 12:32:45 PM", manager: "Admin", action: "Deactivate", details: "Performed to low Manager" },
-    { id: 3, timestamp: "Mar 17, 2021 12:32:55 PM", manager: "Admin", action: "Action", details: "Loan manager details" },
-    { id: 4, timestamp: "Mar 17, 2021 12:32:58 PM", manager: "Eaw", action: "Deactivate", details: "Performing details" },
-    { id: 5, timestamp: "Mar 17, 2021 12:33:53 PM", manager: "Edren", action: "Action", details: "Application details" },
-    { id: 6, timestamp: "Mar 17, 2021 12:33:53 PM", manager: "Enren", action: "Action", details: "Performing details" },
-    { id: 7, timestamp: "Mar 17, 2021 12:35:52 PM", manager: "Euren", action: "Action", details: "Performed to our Manager" }
+    { id: 1, timestamp: getRelativeDateTime(0, 1), manager: "Admin", action: "Action", details: "Active Application Manager", created_at: getRelativeDate(0, 1) },
+    { id: 2, timestamp: getRelativeDateTime(0, 3), manager: "Admin", action: "Deactivate", details: "Performed to low Manager", created_at: getRelativeDate(0, 3) },
+    { id: 3, timestamp: getRelativeDateTime(2, 2), manager: "Admin", action: "Action", details: "Loan manager details", created_at: getRelativeDate(2) },
+    { id: 4, timestamp: getRelativeDateTime(4, 5), manager: "Eaw", action: "Deactivate", details: "Performing details", created_at: getRelativeDate(4) },
+    { id: 5, timestamp: getRelativeDateTime(12, 1), manager: "Edren", action: "Action", details: "Application details", created_at: getRelativeDate(12) },
+    { id: 6, timestamp: getRelativeDateTime(18, 4), manager: "Enren", action: "Action", details: "Performing details", created_at: getRelativeDate(18) },
+    { id: 7, timestamp: getRelativeDateTime(60, 2), manager: "Euren", action: "Action", details: "Performed to our Manager", created_at: getRelativeDate(60) }
 ];
 
 const INITIAL_CUSTOMERS = [
-    { id: "CUST-9021", name: "Rahul Sharma", mobile: "9876543210", email: "rahul@gmail.com", dob: "1990-05-15", pan: "ABCDE1234F", aadhaar: "1234 5678 9012", income: 65000, loanReq: 1500000, status: "Under Review" },
-    { id: "CUST-4432", name: "Priya Patel", mobile: "9812345678", email: "priya.p@gmail.com", dob: "1994-08-22", pan: "FGHIJ5678K", aadhaar: "9876 5432 1098", income: 85000, loanReq: 2500000, status: "Eligible" },
-    { id: "CUST-1092", name: "Amit Kumar", mobile: "9988776655", email: "amit.k@gmail.com", dob: "1988-12-01", pan: "LMNOP9012Q", aadhaar: "4567 8901 2345", income: 45000, loanReq: 800000, status: "New Registration" },
-    { id: "CUST-7782", name: "Sneha Reddy", mobile: "9123450987", email: "sneha.r@gmail.com", dob: "1992-03-10", pan: "RSTUV3456W", aadhaar: "5678 9012 3456", income: 120000, loanReq: 5000000, status: "Payment Completed" },
-    { id: "CUST-5511", name: "Vikram Malhotra", mobile: "9555111222", email: "vikram.m@gmail.com", dob: "1987-11-20", pan: "JKLMN4567P", aadhaar: "6543 2109 8765", income: 95000, loanReq: 3000000, status: "Under Review" },
-    { id: "CUST-8833", name: "Ananya Rao", mobile: "9888333444", email: "ananya.r@gmail.com", dob: "1995-02-14", pan: "OPQRS8901T", aadhaar: "8765 4321 0987", income: 75000, loanReq: 1800000, status: "Under Review" },
-    { id: "CUST-2233", name: "Rajesh Gupta", mobile: "9222333444", email: "rajesh.g@gmail.com", dob: "1982-06-25", pan: "UVWXY2345Z", aadhaar: "3456 7890 1234", income: 110000, loanReq: 4000000, status: "Approved" },
-    { id: "CUST-6677", name: "Meera Nair", mobile: "9666777888", email: "meera.n@gmail.com", dob: "1991-09-05", pan: "ABCDE9876G", aadhaar: "9012 3456 7890", income: 55000, loanReq: 1200000, status: "Rejected" }
+    { id: "CUST-9021", name: "Rahul Sharma", mobile: "9876543210", email: "rahul@gmail.com", dob: "1990-05-15", pan: "ABCDE1234F", aadhaar: "1234 5678 9012", income: 65000, loanReq: 1500000, status: "Under Review", created_at: getRelativeDate(60), registered_on: getRelativeDate(60) },
+    { id: "CUST-4432", name: "Priya Patel", mobile: "9812345678", email: "priya.p@gmail.com", dob: "1994-08-22", pan: "FGHIJ5678K", aadhaar: "9876 5432 1098", income: 85000, loanReq: 2500000, status: "Eligible", created_at: getRelativeDate(32), registered_on: getRelativeDate(32) },
+    { id: "CUST-1092", name: "Amit Kumar", mobile: "9988776655", email: "amit.k@gmail.com", dob: "1988-12-01", pan: "LMNOP9012Q", aadhaar: "4567 8901 2345", income: 45000, loanReq: 800000, status: "New Registration", created_at: getRelativeDate(25), registered_on: getRelativeDate(25) },
+    { id: "CUST-7782", name: "Sneha Reddy", mobile: "9123450987", email: "sneha.r@gmail.com", dob: "1992-03-10", pan: "RSTUV3456W", aadhaar: "5678 9012 3456", income: 120000, loanReq: 5000000, status: "Payment Completed", created_at: getRelativeDate(18), registered_on: getRelativeDate(18) },
+    { id: "CUST-5511", name: "Vikram Malhotra", mobile: "9555111222", email: "vikram.m@gmail.com", dob: "1987-11-20", pan: "JKLMN4567P", aadhaar: "6543 2109 8765", income: 95000, loanReq: 3000000, status: "Under Review", created_at: getRelativeDate(2), registered_on: getRelativeDate(2) },
+    { id: "CUST-8833", name: "Ananya Rao", mobile: "9888333444", email: "ananya.r@gmail.com", dob: "1995-02-14", pan: "OPQRS8901T", aadhaar: "8765 4321 0987", income: 75000, loanReq: 1800000, status: "Under Review", created_at: getRelativeDate(4), registered_on: getRelativeDate(4) },
+    { id: "CUST-2233", name: "Rajesh Gupta", mobile: "9222333444", email: "rajesh.g@gmail.com", dob: "1982-06-25", pan: "UVWXY2345Z", aadhaar: "3456 7890 1234", income: 110000, loanReq: 4000000, status: "Approved", created_at: getRelativeDate(0, 2), registered_on: getRelativeDate(0, 2) },
+    { id: "CUST-6677", name: "Meera Nair", mobile: "9666777888", email: "meera.n@gmail.com", dob: "1991-09-05", pan: "ABCDE9876G", aadhaar: "9012 3456 7890", income: 55000, loanReq: 1200000, status: "Rejected", created_at: getRelativeDate(0, 4), registered_on: getRelativeDate(0, 4) }
 ];
 
 const INITIAL_APPLICATIONS = [
-    { id: "APP-301", customerId: "CUST-9021", customerName: "Rahul Sharma", amount: 1500000, manager: "David Fhone", status: "Under Review", date: "2026-08-20" },
-    { id: "APP-302", customerId: "CUST-4432", customerName: "Priya Patel", amount: 2500000, manager: "John Smith", status: "Eligible", date: "2026-08-22" },
-    { id: "APP-303", customerId: "CUST-1092", customerName: "Amit Kumar", amount: 800000, manager: "Biaton Naera", status: "New Registration", date: "2026-08-25" },
-    { id: "APP-304", customerId: "CUST-7782", customerName: "Sneha Reddy", amount: 5000000, manager: "Edwars Rath", status: "Payment Completed", date: "2026-08-26" },
-    { id: "APP-305", customerId: "CUST-5511", customerName: "Vikram Malhotra", amount: 3000000, manager: "Ademrt Boim", status: "Under Review", date: "2026-08-26" },
-    { id: "APP-306", customerId: "CUST-8833", customerName: "Ananya Rao", amount: 1800000, manager: "Saim Smith", status: "Under Review", date: "2026-08-27" },
-    { id: "APP-307", customerId: "CUST-2233", customerName: "Rajesh Gupta", amount: 4000000, manager: "David Fhone", status: "Approved", date: "2026-08-27" },
-    { id: "APP-308", customerId: "CUST-6677", customerName: "Meera Nair", amount: 1200000, manager: "John Smith", status: "Rejected", date: "2026-08-28" }
+    { id: "APP-301", customerId: "CUST-9021", customerName: "Rahul Sharma", amount: 1500000, manager: "David Fhone", status: "Under Review", date: getRelativeDate(60) },
+    { id: "APP-302", customerId: "CUST-4432", customerName: "Priya Patel", amount: 2500000, manager: "John Smith", status: "Eligible", date: getRelativeDate(32) },
+    { id: "APP-303", customerId: "CUST-1092", customerName: "Amit Kumar", amount: 800000, manager: "Biaton Naera", status: "New Registration", date: getRelativeDate(25) },
+    { id: "APP-304", customerId: "CUST-7782", customerName: "Sneha Reddy", amount: 5000000, manager: "Edwars Rath", status: "Payment Completed", date: getRelativeDate(18) },
+    { id: "APP-305", customerId: "CUST-5511", customerName: "Vikram Malhotra", amount: 3000000, manager: "Ademrt Boim", status: "Under Review", date: getRelativeDate(2) },
+    { id: "APP-306", customerId: "CUST-8833", customerName: "Ananya Rao", amount: 1800000, manager: "Saim Smith", status: "Under Review", date: getRelativeDate(4) },
+    { id: "APP-307", customerId: "CUST-2233", customerName: "Rajesh Gupta", amount: 4000000, manager: "David Fhone", status: "Approved", date: getRelativeDate(0, 2) },
+    { id: "APP-308", customerId: "CUST-6677", customerName: "Meera Nair", amount: 1200000, manager: "John Smith", status: "Rejected", date: getRelativeDate(0, 4) }
 ];
 
 export default function Admin({ onLogout }) {
@@ -557,7 +581,7 @@ export default function Admin({ onLogout }) {
                     {/* Workspace Page Header Title */}
                     <div className="mb-6 sm:hidden">
                         <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-800 tracking-tight">{activeTab}</h1>
-                        <p className="text-xs text-slate-400 mt-1">Veda Housing Finance • Administrator Control</p>
+                        <p className="text-xs text-slate-400 mt-1">Dhanicap Finance • Administrator Control</p>
                     </div>
 
                     {activeTab === "Dashboard" && (
