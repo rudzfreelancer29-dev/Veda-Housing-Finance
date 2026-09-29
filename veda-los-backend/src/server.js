@@ -18,7 +18,7 @@ const notificationRoutes = require("./routes/notifications");
 const app = express();
 
 // Only allow requests from the frontend's local URL (set in .env)
-app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }));
+app.use(cors({ origin: process.env.FRONTEND_URL || "https://dhanicapfinance.com" }));
 
 // The `verify` callback stashes the raw request body on req.rawBody before
 // it's parsed into req.body. Cashfree's webhook signature is computed over
