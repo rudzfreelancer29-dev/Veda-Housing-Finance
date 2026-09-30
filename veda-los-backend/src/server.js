@@ -16,7 +16,8 @@ const auditLogRoutes = require("./routes/auditLogs");
 const notificationRoutes = require("./routes/notifications"); 
 
 const app = express();
-
+console.log("Backend started");
+console.log("CORS Origin:", "https://dhanicapfinance.com");
 // Only allow requests from the frontend's local URL (set in .env)
 app.use(cors({ origin: "https://dhanicapfinance.com" }));
 
