@@ -62,3 +62,9 @@ app.use("/api/notifications", notificationRoutes);
 
 const PORT = process.env.PORT || 5170;
 app.listen(PORT, () => console.log(`Veda LOS & CRM API running on http://localhost:${PORT}`));
+
+const pool = require("./db");
+
+pool.query("SELECT NOW()")
+  .then(() => console.log("✅ Database Connected"))
+  .catch(err => console.error("❌ Database Error:", err));
