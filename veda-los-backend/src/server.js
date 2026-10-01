@@ -20,7 +20,7 @@ console.log("Backend started");
 console.log("CORS Origin:", "https://dhanicapfinance.com");
 // Only allow requests from the frontend's local URL (set in .env)
 app.use(cors({ origin: "https://dhanicapfinance.com" }));
-  
+
 // The `verify` callback stashes the raw request body on req.rawBody before
 // it's parsed into req.body. Cashfree's webhook signature is computed over
 // the exact raw bytes it sent — re-stringifying the parsed JSON later can
@@ -63,7 +63,6 @@ app.use("/api/notifications", notificationRoutes);
 const PORT = process.env.PORT || 5170;
 app.listen(PORT, () => console.log(`Veda LOS & CRM API running on http://localhost:${PORT}`));
 
-const pool = require("./db");
 
 pool.query("SELECT NOW()")
   .then(() => console.log("✅ Database Connected"))
