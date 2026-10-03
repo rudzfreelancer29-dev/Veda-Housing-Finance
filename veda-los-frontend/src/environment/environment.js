@@ -2,8 +2,8 @@ export const environment = {
     CRMService_API: 'https://dhanicapfinance.onrender.com/api',
     
     //Auth
-    // Login: 'auth/login',
-    // AuthMe: 'auth/me',
+    Login: 'auth/login',
+    AuthMe: 'auth/me',
     ForgotPassword: 'auth/forgot-password',
     ResetPassword: 'auth/reset-password',
 
