@@ -3,7 +3,7 @@ export const environment = {
     
     //Auth
     // Login: 'auth/login',
-    AuthMe: 'auth/me',
+    // AuthMe: 'auth/me',
     ForgotPassword: 'auth/forgot-password',
     ResetPassword: 'auth/reset-password',
 
