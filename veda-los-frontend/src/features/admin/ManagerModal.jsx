@@ -202,18 +202,6 @@ export default function ManagerModal({
             )}
           </div>
 
-          {/* Status field */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Status</label>
-            <select
-              value={managerForm.status || "active"}
-              onChange={(e) => handleFieldChange("status", e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg text-sm px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#f26e21]/20 focus:border-[#f26e21] cursor-pointer"
-            >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
 
           <div className="pt-4 border-t border-slate-100 flex justify-end gap-2 text-sm font-semibold">
             <button

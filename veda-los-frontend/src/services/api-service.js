@@ -30,6 +30,10 @@ class ApiService {
         return axios.post(environment.CRMService_API + environment.ResetPassword, data);
     }
 
+    ChangePassword(data){
+        return axios.put(environment.CRMService_API + environment.ChangePassword, data);
+    }
+
     //Admin-managers
     getManagers(){
         return axios.get(environment.CRMService_API + environment.GetManagers);

@@ -149,6 +149,39 @@ function registrationEmail({ customerName, referenceId }) {
   });
 }
 
+function managerRegistrationEmail({ managerName, email }) {
+  return emailLayout({
+    preheader: `Welcome to ${BRAND_NAME} — your manager registration is successful`,
+    title: `Welcome to ${BRAND_NAME}`,
+    content: `
+      <h1 style="margin:0 0 20px;color:#0A0A0A;font-size:22px;font-weight:normal;line-height:30px;">
+        Welcome, ${escapeHtml(managerName)}
+      </h1>
+      <p style="margin:0 0 18px;color:#222222;font-size:15px;line-height:24px;">
+        Your manager registration with ${escapeHtml(BRAND_NAME)} has been completed successfully.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0;">
+        <tr>
+          <td style="background-color:#FAF8F3;border-left:4px solid #C9A961;padding:16px 20px;">
+            <p style="margin:0 0 7px;color:#777777;font-family:Arial,sans-serif;font-size:11px;letter-spacing:1px;">
+              YOUR LOGIN EMAIL
+            </p>
+            <p style="margin:0;color:#0A0A0A;font-size:20px;letter-spacing:0.5px;">
+              ${escapeHtml(email)}
+            </p>
+          </td>
+        </tr>
+      </table>
+      <p style="margin:0 0 18px;color:#222222;font-size:15px;line-height:24px;">
+        Please use the password shared with you by the administrator to sign in. For your security, we recommend changing it after your first login.
+      </p>
+      <p style="margin:28px 0 0;color:#222222;font-size:15px;line-height:24px;">
+        Warm regards,<br />Team ${escapeHtml(BRAND_NAME)}
+      </p>
+    `,
+  });
+}
+
 function eligibilityEmail({ customerName, referenceId }) {
   return emailLayout({
     preheader: `${customerName} — your application is eligible`,
@@ -343,6 +376,7 @@ function customMessageEmail({ customerName, message }) {
 
 module.exports = {
   registrationEmail,
+  managerRegistrationEmail,
   eligibilityEmail,
   statusUpdateEmail,
   paymentRequestEmail,

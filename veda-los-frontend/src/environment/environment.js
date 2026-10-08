@@ -1,12 +1,13 @@
 export const environment = {
-    CRMService_API: 'https://dhanicapfinance.onrender.com/api/',
-    // CRMService_API: 'http://localhost:5170/api/',
+    // CRMService_API: 'https://dhanicapfinance.onrender.com/api/',
+    CRMService_API: 'http://localhost:5170/api/',
     
     //Auth
     Login: 'auth/login',
     AuthMe: 'auth/me',
     ForgotPassword: 'auth/forgot-password',
     ResetPassword: 'auth/reset-password',
+    ChangePassword: 'auth/change-password',
 
     //Admin - Manager
     GetManagers: 'managers/',

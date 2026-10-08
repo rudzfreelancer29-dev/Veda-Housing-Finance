@@ -1,15 +1,19 @@
 import React, { useState } from "react";
+import PropTypes from "prop-types";
 import { Eye, EyeOff, AlertCircle, KeyRound } from "lucide-react";
 import { toast } from "react-toastify";
+import apiService from "../../services/api-service";
 
 export default function UpdatePasswordModal({
   isOpen,
   onClose,
   onSuccess
 }) {
-  const [password, setPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
@@ -18,15 +22,19 @@ export default function UpdatePasswordModal({
   const validate = () => {
     const newErrors = {};
 
-    if (!password) {
-      newErrors.password = "Password is required.";
-    } else if (password.length < 8) {
-      newErrors.password = "Password must be at least 8 characters long.";
+    if (!currentPassword) {
+      newErrors.currentPassword = "Current password is required.";
+    }
+
+    if (!newPassword) {
+      newErrors.newPassword = "New password is required.";
+    } else if (newPassword.length < 8) {
+      newErrors.newPassword = "New password must be at least 8 characters long.";
     }
 
     if (!confirmPassword) {
       newErrors.confirmPassword = "Confirm password is required.";
-    } else if (password !== confirmPassword) {
+    } else if (newPassword !== confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match.";
     }
 
@@ -34,16 +42,29 @@ export default function UpdatePasswordModal({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handlePasswordChange = (val) => {
-    setPassword(val);
+  const handleCurrentPasswordChange = (val) => {
+    setCurrentPassword(val);
     const newErrors = { ...errors };
 
     if (!val) {
-      newErrors.password = "Password is required.";
-    } else if (val.length < 8) {
-      newErrors.password = "Password must be at least 8 characters long.";
+      newErrors.currentPassword = "Current password is required.";
     } else {
-      delete newErrors.password;
+      delete newErrors.currentPassword;
+    }
+
+    setErrors(newErrors);
+  };
+
+  const handleNewPasswordChange = (val) => {
+    setNewPassword(val);
+    const newErrors = { ...errors };
+
+    if (!val) {
+      newErrors.newPassword = "New password is required.";
+    } else if (val.length < 8) {
+      newErrors.newPassword = "New password must be at least 8 characters long.";
+    } else {
+      delete newErrors.newPassword;
     }
 
     if (confirmPassword) {
@@ -63,7 +84,7 @@ export default function UpdatePasswordModal({
 
     if (!val) {
       newErrors.confirmPassword = "Confirm password is required.";
-    } else if (val !== password) {
+    } else if (val !== newPassword) {
       newErrors.confirmPassword = "Passwords do not match.";
     } else {
       delete newErrors.confirmPassword;
@@ -73,25 +94,40 @@ export default function UpdatePasswordModal({
   };
 
   const handleClose = () => {
-    setPassword("");
+    setCurrentPassword("");
+    setNewPassword("");
     setConfirmPassword("");
-    setShowPassword(false);
+    setShowCurrentPassword(false);
+    setShowNewPassword(false);
     setErrors({});
     onClose();
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
 
     setLoading(true);
-    // Simulated update without API call for now
-    setTimeout(() => {
-      setLoading(false);
-      toast.success("Password updated successfully!");
-      if (onSuccess) onSuccess();
+    try {
+      const payload = {
+        currentPassword,
+        newPassword,
+        confirmPassword,
+      };
+
+      const response = await apiService.ChangePassword(payload);
+      toast.success(response?.data?.message || "Password updated successfully!");
+      if (onSuccess) onSuccess(response?.data);
       handleClose();
-    }, 400);
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Failed to update password. Please try again.";
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -121,48 +157,87 @@ export default function UpdatePasswordModal({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} noValidate className="p-6 space-y-4">
-          {/* Password Field with Show/Hide button */}
+          {/* Current Password Field with Show/Hide button */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
-              Password
+              Current Password
             </label>
             <div className="relative">
               <input
-                type={showPassword ? "text" : "password"}
-                placeholder="Enter at least 8 characters"
-                value={password}
-                onChange={(e) => handlePasswordChange(e.target.value)}
+                type={showCurrentPassword ? "text" : "password"}
+                placeholder="Enter current password"
+                value={currentPassword}
+                onChange={(e) => handleCurrentPasswordChange(e.target.value)}
                 onBlur={() => {
-                  if (!password) {
-                    setErrors((prev) => ({ ...prev, password: "Password is required." }));
-                  } else if (password.length < 8) {
-                    setErrors((prev) => ({ ...prev, password: "Password must be at least 8 characters long." }));
+                  if (!currentPassword) {
+                    setErrors((prev) => ({ ...prev, currentPassword: "Current password is required." }));
                   }
                 }}
                 className={`w-full bg-slate-50 border ${
-                  errors.password
+                  errors.currentPassword
                     ? "border-red-500 focus:ring-red-500/20 focus:border-red-500"
                     : "border-slate-200 focus:border-[#f26e21] focus:ring-[#f26e21]/20"
                 } rounded-lg text-sm px-3.5 py-2.5 pr-10 focus:outline-none focus:ring-2 transition-all`}
               />
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
+                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer transition-colors"
-                title={showPassword ? "Hide password" : "Show password"}
+                title={showCurrentPassword ? "Hide password" : "Show password"}
               >
-                {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                {showCurrentPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
               </button>
             </div>
-            {errors.password && (
+            {errors.currentPassword && (
               <p className="text-xs text-red-500 font-medium mt-1 flex items-center gap-1">
                 <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                {errors.password}
+                {errors.currentPassword}
               </p>
             )}
           </div>
 
-          {/* Confirm Password Field WITHOUT Show/Hide button */}
+          {/* New Password Field with Show/Hide button */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+              New Password
+            </label>
+            <div className="relative">
+              <input
+                type={showNewPassword ? "text" : "password"}
+                placeholder="Enter at least 8 characters"
+                value={newPassword}
+                onChange={(e) => handleNewPasswordChange(e.target.value)}
+                onBlur={() => {
+                  if (!newPassword) {
+                    setErrors((prev) => ({ ...prev, newPassword: "New password is required." }));
+                  } else if (newPassword.length < 8) {
+                    setErrors((prev) => ({ ...prev, newPassword: "New password must be at least 8 characters long." }));
+                  }
+                }}
+                className={`w-full bg-slate-50 border ${
+                  errors.newPassword
+                    ? "border-red-500 focus:ring-red-500/20 focus:border-red-500"
+                    : "border-slate-200 focus:border-[#f26e21] focus:ring-[#f26e21]/20"
+                } rounded-lg text-sm px-3.5 py-2.5 pr-10 focus:outline-none focus:ring-2 transition-all`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer transition-colors"
+                title={showNewPassword ? "Hide password" : "Show password"}
+              >
+                {showNewPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              </button>
+            </div>
+            {errors.newPassword && (
+              <p className="text-xs text-red-500 font-medium mt-1 flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                {errors.newPassword}
+              </p>
+            )}
+          </div>
+
+          {/* Confirm Password Field */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
               Confirm Password
@@ -175,7 +250,7 @@ export default function UpdatePasswordModal({
               onBlur={() => {
                 if (!confirmPassword) {
                   setErrors((prev) => ({ ...prev, confirmPassword: "Confirm password is required." }));
-                } else if (password !== confirmPassword) {
+                } else if (newPassword !== confirmPassword) {
                   setErrors((prev) => ({ ...prev, confirmPassword: "Passwords do not match." }));
                 }
               }}
@@ -218,3 +293,9 @@ export default function UpdatePasswordModal({
     </div>
   );
 }
+
+UpdatePasswordModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onSuccess: PropTypes.func,
+};
