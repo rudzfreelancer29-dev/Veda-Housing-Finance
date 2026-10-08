@@ -115,4 +115,56 @@ async function resetPassword(req, res) {
   res.json({ message: "Password has been reset successfully. You can now log in." });
 }
 
-module.exports = { login, me, forgotPassword, resetPassword };
+// Update password for the currently logged-in user (Super Admin or Manager).
+// Requires the current password, so a stolen/unattended session token alone
+// cannot be used to take over the account.
+async function changePassword(req, res) {
+  try {
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "currentPassword and newPassword are required" });
+    }
+    if (typeof newPassword !== "string" || newPassword.length < 8) {
+      return res.status(400).json({ message: "New password must be at least 8 characters" });
+    }
+    if (confirmPassword !== undefined && confirmPassword !== newPassword) {
+      return res.status(400).json({ message: "New password and confirm password do not match" });
+    }
+    if (currentPassword === newPassword) {
+      return res.status(400).json({ message: "New password must be different from the current password" });
+    }
+
+    const { rows } = await pool.query(
+      "SELECT id, password_hash FROM users WHERE id = $1 AND is_active = TRUE",
+      [req.user.id]
+    );
+    const user = rows[0];
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const valid = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!valid) return res.status(401).json({ message: "Current password is incorrect" });
+
+    const newHash = await bcrypt.hash(newPassword, 10);
+    // Also clears any pending forgot-password token, since it is now stale.
+    await pool.query(
+      "UPDATE users SET password_hash = $1, reset_token_hash = NULL, reset_token_expires = NULL WHERE id = $2",
+      [newHash, user.id]
+    );
+
+    await auditLogModel.record({
+      userId: user.id,
+      action: "change_password",
+      entity: "users",
+      entityId: user.id,
+      details: `${req.user.role} changed their password`,
+    });
+
+    res.json({ message: "Password updated successfully" });
+  } catch (err) {
+    console.error("Change password failed:", err.message);
+    res.status(500).json({ message: "Could not update password. Please try again." });
+  }
+}
+
+module.exports = { login, me, forgotPassword, resetPassword, changePassword };

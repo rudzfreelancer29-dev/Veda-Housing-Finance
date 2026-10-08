@@ -1,6 +1,9 @@
 const bcrypt = require("bcryptjs");
 const managerModel = require("../models/managerModel");
 const auditLogModel = require("../models/auditLogModel");
+const { sendEmail } = require("../utils/mailer");
+const { sendSms } = require("../utils/sms");
+const { managerRegistrationEmail } = require("../utils/emailTemplates");
 
 // PDF Section 2.1: Super Admin can "Create, edit, activate, deactivate,
 // and delete Manager accounts." All 5 functions below map to that list.
@@ -29,6 +32,28 @@ async function createManager(req, res) {
       entityId: manager.id,
       details: `Created manager account: ${manager.email}`,
     });
+
+    // Registration-success notifications (email + SMS). A failure here must
+    // NOT undo or fail the manager creation, so each is isolated.
+    try {
+      await sendEmail({
+        to: manager.email,
+        subject: "Welcome to Dhanicap Finance — your manager registration is successful",
+        html: managerRegistrationEmail({ managerName: manager.name, email: manager.email }),
+      });
+    } catch (e) {
+      console.error("Manager registration email failed:", e.message);
+    }
+
+    try {
+      await sendSms({
+        to: mobile_number,
+        message: `Dear ${manager.name}, your Dhanicap Finance manager registration is successful. You can now log in using your registered email.`,
+      });
+    } catch (e) {
+      console.error("Manager registration SMS failed:", e.message);
+    }
+
     res.status(201).json(manager);
   } catch (err) {
     if (err.code === "23505") return res.status(409).json({ message: "A user with this email already exists" });

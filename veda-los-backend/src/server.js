@@ -19,7 +19,7 @@ const app = express();
 console.log("Backend started");
 console.log("CORS Origin:", "https://dhanicapfinance.com");
 // Only allow requests from the frontend's local URL (set in .env)
-app.use(cors({ origin: "https://dhanicapfinance.com" }));
+app.use(cors({ origin: ["https://dhanicapfinance.com", "http://localhost:5173"] }));
 
 // The `verify` callback stashes the raw request body on req.rawBody before
 // it's parsed into req.body. Cashfree's webhook signature is computed over
