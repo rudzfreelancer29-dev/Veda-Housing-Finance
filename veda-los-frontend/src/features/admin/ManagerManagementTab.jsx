@@ -37,9 +37,10 @@ export default function ManagerManagementTab({
   // Filter Managers
   const filteredManagers = useMemo(() => {
     return managers.filter(m => {
-      const matchesSearch = m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.role.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = (m.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (m.email || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (m.mobile || m.mobile_number || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (m.role || "").toLowerCase().includes(searchQuery.toLowerCase());
       if (activeManagerFilter === "all") return matchesSearch;
       return matchesSearch && m.status === activeManagerFilter;
     });

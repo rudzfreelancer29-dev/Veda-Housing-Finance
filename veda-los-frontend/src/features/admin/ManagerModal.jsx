@@ -19,13 +19,21 @@ export default function ManagerModal({
     const newErrors = {};
     const nameTrimmed = (managerForm.name || "").trim();
     const emailTrimmed = (managerForm.email || "").trim();
+    const mobileTrimmed = (managerForm.mobile_number || managerForm.mobile || "").trim();
     const password = managerForm.password || "";
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const mobileRegex = /^[6-9]\d{9}$/;
 
     if (!nameTrimmed) {
       newErrors.name = "Full name is required.";
     } else if (nameTrimmed.length < 2) {
       newErrors.name = "Full name must be at least 2 characters.";
+    }
+
+    if (!mobileTrimmed) {
+      newErrors.mobile = "Mobile number is required.";
+    } else if (!mobileRegex.test(mobileTrimmed)) {
+      newErrors.mobile = "Please enter a valid 10-digit mobile number starting with 6-9.";
     }
 
     if (!emailTrimmed) {
@@ -56,9 +64,16 @@ export default function ManagerModal({
   };
 
   const handleFieldChange = (field, value) => {
-    setManagerForm({ ...managerForm, [field]: value });
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: "" }));
+    if (field === "mobile" || field === "mobile_number") {
+      setManagerForm({ ...managerForm, mobile: value, mobile_number: value });
+      if (errors.mobile || errors.mobile_number) {
+        setErrors((prev) => ({ ...prev, mobile: "", mobile_number: "" }));
+      }
+    } else {
+      setManagerForm({ ...managerForm, [field]: value });
+      if (errors[field]) {
+        setErrors((prev) => ({ ...prev, [field]: "" }));
+      }
     }
   };
 
@@ -124,6 +139,32 @@ export default function ManagerModal({
               <p className="text-xs text-red-500 font-medium mt-1 flex items-center gap-1">
                 <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                 {errors.email}
+              </p>
+            )}
+          </div>
+
+          {/* Mobile No. */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Mobile No.</label>
+            <input
+              type="tel"
+              maxLength={10}
+              placeholder="e.g. 9876543210"
+              value={managerForm.mobile || managerForm.mobile_number || managerForm.phone || ""}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, "");
+                handleFieldChange("mobile", val);
+              }}
+              className={`w-full bg-slate-50 border ${
+                errors.mobile
+                  ? "border-red-500 focus:ring-red-500/20 focus:border-red-500"
+                  : "border-slate-200 focus:border-[#f26e21] focus:ring-[#f26e21]/20"
+              } rounded-lg text-sm px-3.5 py-2.5 focus:outline-none focus:ring-2 transition-all`}
+            />
+            {errors.mobile && (
+              <p className="text-xs text-red-500 font-medium mt-1 flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                {errors.mobile}
               </p>
             )}
           </div>

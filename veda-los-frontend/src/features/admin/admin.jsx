@@ -28,6 +28,7 @@ import AuditLogsTab from "./AuditLogsTab";
 import ManagerModal from "./ManagerModal";
 import ManagerCustomersModal from "./ManagerCustomersModal";
 import NotificationModal from "./NotificationModal";
+import UpdatePasswordModal from "./UpdatePasswordModal";
 import apiService from "../../services/api-service";
 
 // Helper to get relative date string (YYYY-MM-DD)
@@ -126,6 +127,7 @@ export default function Admin({ onLogout }) {
                         id: m.id || index + 1,
                         name: m.name || m.username || `Manager ${m.id || index + 1}`,
                         email: m.email || "",
+                        mobile: m.mobile || m.mobile_number || m.phone || "",
                         role: m.role || "Manager",
                         status: status,
                         is_active: m.is_active,
@@ -301,12 +303,13 @@ export default function Admin({ onLogout }) {
     });
 
     // Forms state
-    const [managerForm, setManagerForm] = useState({ name: "", email: "", password: "", status: "active", applications: 0 });
+    const [managerForm, setManagerForm] = useState({ name: "", email: "", mobile: "", password: "", status: "active", applications: 0 });
 
     // Notifications state
     const [notifications, setNotifications] = useState([]);
     const [selectedNotification, setSelectedNotification] = useState(null);
     const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
+    const [isUpdatePasswordModalOpen, setIsUpdatePasswordModalOpen] = useState(false);
 
     const handleOpenNotificationModal = (notification) => {
         setSelectedNotification(notification);
@@ -361,6 +364,8 @@ export default function Admin({ onLogout }) {
                 const payload = {
                     name: managerForm.name.trim(),
                     email: managerForm.email.trim(),
+                    mobile: managerForm.mobile ? managerForm.mobile.trim() : "",
+                    mobile_number: managerForm.mobile ? managerForm.mobile.trim() : "",
                     password: managerForm.password
                 };
                 await apiService.createManagers(payload);
@@ -379,7 +384,9 @@ export default function Admin({ onLogout }) {
             try {
                 const payload = {
                     name: managerForm.name.trim(),
-                    email: managerForm.email.trim()
+                    email: managerForm.email.trim(),
+                    mobile: managerForm.mobile ? managerForm.mobile.trim() : "",
+                    mobile_number: managerForm.mobile ? managerForm.mobile.trim() : ""
                 };
                 await apiService.updateManager(payload, editingManager.id);
                 toast.success(`Manager account updated for ${payload.name}!`);
@@ -401,6 +408,7 @@ export default function Admin({ onLogout }) {
         setManagerForm({
             name: manager.name,
             email: manager.email,
+            mobile: manager.mobile || manager.mobile_number || manager.phone || "",
             password: "",
             role: manager.role,
             status: manager.status,
@@ -531,7 +539,7 @@ export default function Admin({ onLogout }) {
         headerActionLabel = "Add Manager";
         headerOnActionClick = () => {
             setModalMode("add");
-            setManagerForm({ name: "", email: "", password: "", status: "active", applications: 0 });
+            setManagerForm({ name: "", email: "", mobile: "", password: "", status: "active", applications: 0 });
             setIsModalOpen(true);
         };
     }
@@ -572,6 +580,7 @@ export default function Admin({ onLogout }) {
                     onNotificationClick={handleOpenNotificationModal}
                     onReadNotification={handleReadNotification}
                     onMarkNotificationsRead={handleMarkAllNotificationsRead}
+                    onOpenUpdatePassword={() => setIsUpdatePasswordModalOpen(true)}
                     onLogout={onLogout || (() => { sessionStorage.clear(); localStorage.clear(); window.location.href = "/login"; })}
                     onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
                 />
@@ -770,6 +779,12 @@ export default function Admin({ onLogout }) {
                 notification={selectedNotification}
                 onClose={handleCloseNotificationModal}
                 onMarkAsRead={handleReadNotification}
+            />
+
+            {/* Update Password Modal */}
+            <UpdatePasswordModal
+                isOpen={isUpdatePasswordModalOpen}
+                onClose={() => setIsUpdatePasswordModalOpen(false)}
             />
         </div>
     );
