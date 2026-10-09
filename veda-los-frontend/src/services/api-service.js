@@ -85,6 +85,10 @@ class ApiService {
         return axios.get(`${environment.CRMService_API}${environment.GetManagersCustomerById}${id}`);
     }
 
+    SendCustomMessage(data, id){
+        return axios.post(`${environment.CRMService_API}${environment.SendCustomMessage}${id}/message`, data);
+    }
+
     //document management
     UploadCustomerDocument(data) {
         return axios.post(environment.CRMService_API + environment.UploadCustomerDocument, data);
