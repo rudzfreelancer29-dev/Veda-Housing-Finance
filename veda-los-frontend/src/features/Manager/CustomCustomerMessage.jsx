@@ -6,23 +6,63 @@ import apiService from "../../services/api-service";
 const TEMPLATES = [
   {
     label: "Under Review",
-    subject: "Loan Application Update",
-    message: "Dear Customer, your loan application is currently under review. We will notify you once the review is complete."
+    subject: "Loan Application Update – Dhanicap Finance",
+    message: `Dear Customer,
+
+Your loan application is currently under review with Dhanicap Finance. We will notify you once the review is complete.
+
+Thank you for choosing Dhanicap Finance.
+
+Best Regards,
+Team Dhanicap Finance`
   },
   {
     label: "Documents Required",
-    subject: "Action Required: Pending Documents",
-    message: "Dear Customer, please upload the pending documents required to proceed with your loan verification."
+    subject: "Action Required: Pending Documents – Dhanicap Finance",
+    message: `Dear Customer,
+
+Please upload the pending documents required to proceed with your loan verification at Dhanicap Finance.
+
+Thank you for choosing Dhanicap Finance.
+
+Best Regards,
+Team Dhanicap Finance`
   },
   {
     label: "Payment Pending",
-    subject: "Payment Request Notification",
-    message: "Dear Customer, your loan processing fee is pending. Please complete the payment to proceed further."
+    subject: "Payment Request Notification – Dhanicap Finance",
+    message: `Dear Customer,
+
+Your loan processing fee is pending. Please complete the payment to proceed further with your loan application at Dhanicap Finance.
+
+Thank you for choosing Dhanicap Finance.
+
+Best Regards,
+Team Dhanicap Finance`
   },
   {
     label: "Approved",
-    subject: "Congratulations! Loan Application Approved",
-    message: "Dear Customer, we are pleased to inform you that your loan application has been approved. Our representative will contact you soon."
+    subject: "Congratulations! Loan Application Approved – Dhanicap Finance",
+    message: `Dear Customer,
+
+We are pleased to inform you that your loan application has been approved by Dhanicap Finance. Our representative will contact you soon.
+
+Thank you for choosing Dhanicap Finance.
+
+Best Regards,
+Team Dhanicap Finance`
+  },
+  {
+    label: "CIBIL",
+    subject: "Update on Your CIBIL Check – Dhanicap Finance",
+    message: `Dear Customer,
+
+This is to inform you that your CIBIL credit report has been checked by Dhanicap Finance as part of your loan application process.
+
+Thank you for choosing Dhanicap Finance.
+
+Best Regards,
+Team Dhanicap Finance`
   }
 ];
 
@@ -32,18 +72,16 @@ export default function CustomCustomerMessage({
   customer,
   onSuccess
 }) {
-  const [subject, setSubject] = useState("Loan Application Update");
-  const [message, setMessage] = useState(
-    "Dear Customer, your loan application is currently under review. We will notify you once the review is complete."
-  );
+  const [subject, setSubject] = useState(TEMPLATES[0].subject);
+  const [message, setMessage] = useState(TEMPLATES[0].message);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen && customer) {
-      setSubject("Loan Application Update");
+      setSubject(TEMPLATES[0].subject);
       const customerName = customer.fullName || customer.name || "Customer";
       setMessage(
-        `Dear ${customerName}, your loan application is currently under review. We will notify you once the review is complete.`
+        TEMPLATES[0].message.replace("Dear Customer", `Dear ${customerName}`)
       );
     }
   }, [isOpen, customer]);
