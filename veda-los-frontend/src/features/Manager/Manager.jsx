@@ -23,6 +23,7 @@ import {
 import CustomerDocumentsModal from "./CustomerDocumentsModal";
 import CustomerDetailsModal from "./CustomerDetailsModal";
 import PaymentHistoryModal from "./PaymentHistoryModal";
+import UpdatePasswordModal from "../admin/UpdatePasswordModal";
 
 const INITIAL_CUSTOMER_FORM = {
   fullName: "",
@@ -122,6 +123,9 @@ export default function Manager({ onLogout }) {
   const [paymentHistoryCustomer, setPaymentHistoryCustomer] = useState(null);
   const [paymentHistoryList, setPaymentHistoryList] = useState([]);
   const [paymentHistoryLoading, setPaymentHistoryLoading] = useState(false);
+
+  // Update Password Modal State
+  const [isUpdatePasswordModalOpen, setIsUpdatePasswordModalOpen] = useState(false);
 
   // Notifications list
   const [notifications, setNotifications] = useState([
@@ -497,6 +501,7 @@ export default function Manager({ onLogout }) {
           notifications={notifications}
           onMarkNotificationsRead={() => setNotifications(notifications.map(n => ({ ...n, read: true })))}
           user={{ name: "David Fhone", role: "Loan Operations Manager", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100" }}
+          onOpenUpdatePassword={() => setIsUpdatePasswordModalOpen(true)}
           onLogout={onLogout || (() => { sessionStorage.clear(); localStorage.clear(); window.location.href = "/login"; })}
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         />
@@ -636,6 +641,12 @@ export default function Manager({ onLogout }) {
         payments={paymentHistoryList}
         loading={paymentHistoryLoading}
         onPaymentUpdated={fetchCustomers}
+      />
+
+      {/* Update Password Modal */}
+      <UpdatePasswordModal
+        isOpen={isUpdatePasswordModalOpen}
+        onClose={() => setIsUpdatePasswordModalOpen(false)}
       />
     </div>
   );

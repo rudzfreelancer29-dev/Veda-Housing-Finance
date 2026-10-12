@@ -15,6 +15,7 @@ export default function Navbar({
     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100"
   },
   onSetup,
+  onOpenUpdatePassword,
   onToggleSidebar
 }) {
   const [showNotifications, setShowNotifications] = useState(false);
@@ -186,6 +187,16 @@ export default function Navbar({
                     System Setup
                   </button>
                 )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowProfileMenu(false);
+                    if (onOpenUpdatePassword) onOpenUpdatePassword();
+                  }}
+                  className="w-full text-left px-3 py-2 hover:bg-slate-50 text-slate-700 font-medium cursor-pointer transition-colors"
+                >
+                  Update Password
+                </button>
                 {onLogout && (
                   <button
                     onClick={() => {
@@ -307,6 +318,16 @@ export default function Navbar({
                     System Setup
                   </button>
                 )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowProfileMenu(false);
+                    if (onOpenUpdatePassword) onOpenUpdatePassword();
+                  }}
+                  className="w-full text-left px-4 py-2 hover:bg-slate-50 text-slate-700 font-medium cursor-pointer transition-colors"
+                >
+                  Update Password
+                </button>
                 {onLogout && (
                   <button
                     onClick={() => {

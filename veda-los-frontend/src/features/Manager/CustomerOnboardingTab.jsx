@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { Search, UserPlus, Upload, Send, CreditCard, RefreshCw, Pencil, Eye, Edit } from "lucide-react";
+import { Search, UserPlus, Upload, Send, CreditCard, RefreshCw, Pencil, Eye, Edit, Mail } from "lucide-react";
 import { toast } from "react-toastify";
 import apiService from "../../services/api-service";
+import CustomCustomerMessage from "./CustomCustomerMessage";
 
 const STATUSES = [
   { key: "new_registration", label: "New Registration" },
@@ -33,6 +34,11 @@ export default function CustomerOnboardingTab({
     customer: null,
     status: "eligible",
     loading: false
+  });
+
+  const [messageModal, setMessageModal] = useState({
+    isOpen: false,
+    customer: null
   });
 
   const filteredCustomers = customers.filter(c => {
@@ -219,6 +225,19 @@ export default function CustomerOnboardingTab({
                     >
                       <CreditCard className="w-4 h-4" />
                     </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMessageModal({
+                          isOpen: true,
+                          customer: cust
+                        });
+                      }}
+                      title="Send Custom Message"
+                      className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg cursor-pointer"
+                    >
+                      <Mail className="w-4 h-4" />
+                    </button>
                   </td>
                 </tr>
               ))
@@ -226,6 +245,13 @@ export default function CustomerOnboardingTab({
           </tbody>
         </table>
       </div>
+
+      {/* Custom Customer Message Modal */}
+      <CustomCustomerMessage
+        isOpen={messageModal.isOpen}
+        customer={messageModal.customer}
+        onClose={() => setMessageModal({ isOpen: false, customer: null })}
+      />
 
       {/* Status Update Confirmation Modal */}
       {statusModal.isOpen && (
