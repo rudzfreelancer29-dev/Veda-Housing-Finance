@@ -33,6 +33,8 @@ app.use(express.json({
 // Serves uploaded documents (e.g. /uploads/171234-aadhaar.pdf) as static files.
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
+app.use("/assets", express.static(path.join(__dirname, "assets")));
+
 // Basic health check
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", service: "Veda LOS & CRM API" });
