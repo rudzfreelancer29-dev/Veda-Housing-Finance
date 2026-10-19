@@ -38,6 +38,15 @@ async function findByCustomerId(customerId) {
   return rows;
 }
 
+// Used to check that a Manager only verifies payments for customers they registered.
+async function findCustomerByApplicationId(applicationId) {
+  const { rows } = await pool.query(
+    `SELECT c.* FROM customers c JOIN applications a ON a.customer_id = c.id WHERE a.id = $1`,
+    [applicationId]
+  );
+  return rows[0];
+}
+
 async function updateStatus(id, status, gatewayPaymentId) {
   const { rows } = await pool.query(
     `UPDATE payments SET status = $1, gateway_payment_id = COALESCE($2, gateway_payment_id), updated_at = NOW()
@@ -49,5 +58,5 @@ async function updateStatus(id, status, gatewayPaymentId) {
 
 module.exports = {
   findLatestApplicationForCustomer, create, findById,
-  findByGatewayOrderId, findByCustomerId, updateStatus,
+  findByGatewayOrderId, findByCustomerId, findCustomerByApplicationId, updateStatus,
 };

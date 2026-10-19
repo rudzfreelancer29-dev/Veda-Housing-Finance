@@ -186,6 +186,16 @@ export default function CustomerOnboardingTab({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
+                        if (onCustomerClick) onCustomerClick(cust);
+                      }}
+                      title="View Customer Details & Payments"
+                      className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg cursor-pointer"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
                         if (onOpenEditModal) {
                           onOpenEditModal(cust);
                         } else {

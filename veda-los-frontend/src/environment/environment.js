@@ -1,6 +1,5 @@
 export const environment = {
-    CRMService_API: 'https://dhanicapfinance.onrender.com/api/',
-    // CRMService_API: 'http://localhost:5170/api/',
+    CRMService_API: (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE_URL) || 'https://dhanicapfinance.onrender.com/api/',
     
     //Auth
     Login: 'auth/login',
@@ -40,10 +39,10 @@ export const environment = {
     UpdateCustomerStatus: 'my/applications/',
 
 
-    //Patment Managemant
+    //Payment Management
     ManagersPaymentRequest: 'payments',
     GetPaymentHistory: 'payments/',
-    
+    VerifyPayment: 'payments/verify',
     UpdatePaymentStatus: 'payments/',//yet to bind
 
 

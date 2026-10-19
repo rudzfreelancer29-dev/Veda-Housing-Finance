@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   X,
   User,
@@ -10,8 +10,15 @@ import {
   FileText,
   Pencil,
   Eye,
-  Upload
+  CreditCard,
+  Send,
+  RefreshCw,
+  CheckCircle2,
+  Clock,
+  AlertCircle
 } from "lucide-react";
+import { toast } from "react-toastify";
+import apiService from "../../services/api-service";
 
 export default function CustomerDetailsModal({
   isOpen,
@@ -20,9 +27,119 @@ export default function CustomerDetailsModal({
   loading = false,
   onOpenEdit,
   onSeeDocs,
-  onManageDocs
+  onManageDocs,
+  onPaymentSuccess
 }) {
+  const [activeTab, setActiveTab] = useState("overview"); // "overview" | "payments"
+  const [payments, setPayments] = useState([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [feeType, setFeeType] = useState("processing_fee");
+  const [submittingPayment, setSubmittingPayment] = useState(false);
+
+  // Helper to extract clean customer ID
+  const getCleanCustomerId = useCallback(() => {
+    if (!customer) return "";
+    return customer.rawId || customer.id || customer.reference_id || customer.referenceId || "";
+  }, [customer]);
+
+  // Fetch payment history for this customer: GET /api/payments/:customerId
+  const fetchPaymentHistory = useCallback(async () => {
+    const custId = getCleanCustomerId();
+    if (!custId) return;
+
+    setPaymentsLoading(true);
+    try {
+      const targetId = typeof custId === "string" ? custId.replace(/^CUST-/, "") : custId;
+      const response = await apiService.GetPaymentHistory(targetId);
+      const resData =
+        response.data?.data ||
+        response.data?.payments ||
+        response.data?.payment ||
+        response.data;
+
+      const list = Array.isArray(resData)
+        ? resData
+        : resData && typeof resData === "object" && (resData.id || resData.amount || resData.gateway_order_id)
+        ? [resData]
+        : [];
+
+      setPayments(list);
+    } catch (error) {
+      console.error("Failed to load customer payment history:", error);
+      setPayments([]);
+    } finally {
+      setPaymentsLoading(false);
+    }
+  }, [getCleanCustomerId]);
+
+  // Load payments whenever modal opens or customer changes
+  useEffect(() => {
+    if (isOpen && customer) {
+      fetchPaymentHistory();
+      // Pre-fill amount suggestion based on loan requirement if available (1% processing fee)
+      const loan = Number(customer.loanReq) || (Number(customer.monthly_income) * 10) || 0;
+      if (loan > 0 && !paymentAmount) {
+        setPaymentAmount(String(Math.round(loan * 0.01)));
+      }
+    } else {
+      setPayments([]);
+      setPaymentAmount("");
+      setFeeType("processing_fee");
+    }
+  }, [isOpen, customer]);
+
   if (!isOpen) return null;
+
+  // Handler to submit payment request: POST /api/payments
+  const handleSendPaymentRequest = async (e) => {
+    e.preventDefault();
+    const custId = getCleanCustomerId();
+    if (!custId) {
+      toast.error("Customer ID is missing.");
+      return;
+    }
+
+    const numAmount = Number(paymentAmount);
+    if (!numAmount || numAmount <= 0) {
+      toast.warn("Please enter a valid payment amount (greater than 0).");
+      return;
+    }
+
+    setSubmittingPayment(true);
+    try {
+      const targetId = typeof custId === "string" ? custId.replace(/^CUST-/, "") : custId;
+      const payload = {
+        customerId: String(targetId),
+        amount: numAmount,
+        feeType: feeType || "processing_fee"
+      };
+
+      await apiService.ManagersPaymentRequest(payload);
+
+      // Requirement: Action shows loading indicator and displays success message
+      toast.success("Payment request and email/SMS sent to customer");
+
+      setPaymentAmount("");
+      setFeeType("processing_fee");
+
+      // Refresh customer payment history immediately
+      await fetchPaymentHistory();
+
+      if (onPaymentSuccess) {
+        onPaymentSuccess();
+      }
+    } catch (error) {
+      console.error("Error creating payment request:", error);
+      const msg =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        "Failed to send payment request. Please try again.";
+      toast.error(msg);
+    } finally {
+      setSubmittingPayment(false);
+    }
+  };
 
   const formatDate = (dateStr) => {
     if (!dateStr || dateStr === "-") return "-";
@@ -33,6 +150,20 @@ export default function CustomerDetailsModal({
         year: "numeric",
         month: "short",
         day: "numeric"
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formatDateTime = (dateStr) => {
+    if (!dateStr || dateStr === "-") return "-";
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleString("en-IN", {
+        dateStyle: "medium",
+        timeStyle: "short"
       });
     } catch {
       return dateStr;
@@ -53,7 +184,7 @@ export default function CustomerDetailsModal({
     if (s.includes("document upload")) {
       return "bg-blue-50 text-blue-700 border-blue-200";
     }
-    if (s.includes("payment requested")) {
+    if (s.includes("payment requested") || s.includes("payment_pending")) {
       return "bg-purple-50 text-purple-700 border-purple-200";
     }
     return "bg-slate-100 text-slate-700 border-slate-200";
@@ -64,20 +195,50 @@ export default function CustomerDetailsModal({
     return status.toLowerCase().replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
   };
 
+  const getPaymentStatusBadge = (status) => {
+    const s = (status || "").toLowerCase().replace(/ /g, "_");
+    if (s === "successful" || s === "success" || s === "completed" || s === "paid" || s === "payment_completed") {
+      return {
+        bg: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        icon: <CheckCircle2 className="w-3.5 h-3.5" />,
+        text: "Successful"
+      };
+    }
+    if (s === "pending" || s === "payment_pending" || s === "payment requested") {
+      return {
+        bg: "bg-amber-50 text-amber-700 border-amber-200",
+        icon: <Clock className="w-3.5 h-3.5" />,
+        text: "Pending"
+      };
+    }
+    if (s === "refunded") {
+      return {
+        bg: "bg-purple-50 text-purple-700 border-purple-200",
+        icon: <AlertCircle className="w-3.5 h-3.5" />,
+        text: "Refunded"
+      };
+    }
+    return {
+      bg: "bg-rose-50 text-rose-700 border-rose-200",
+      icon: <AlertCircle className="w-3.5 h-3.5" />,
+      text: status ? status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "Failed"
+    };
+  };
+
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in duration-150">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full flex flex-col max-h-[90vh] overflow-hidden border border-slate-100">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full flex flex-col max-h-[92vh] overflow-hidden border border-slate-100">
         
         {/* Modal Header */}
-        <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
           <div className="flex items-center gap-3.5">
             <div className="w-11 h-11 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-base shadow-xs shrink-0">
-              {customer?.full_name || customer?.name ? (customer.full_name || customer.name).charAt(0).toUpperCase() : <User className="w-5 h-5" />}
+              {customer?.full_name || customer?.name || customer?.fullName ? (customer.full_name || customer.name || customer.fullName).charAt(0).toUpperCase() : <User className="w-5 h-5" />}
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-bold text-slate-900 text-lg leading-tight">
-                  {customer?.full_name || customer?.name || "Customer Profile"}
+                  {customer?.full_name || customer?.name || customer?.fullName || "Customer Profile"}
                 </h3>
                 <span className="text-xs font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
                   {customer?.reference_id || customer?.referenceId || customer?.id || "-"}
@@ -96,14 +257,43 @@ export default function CustomerDetailsModal({
           </button>
         </div>
 
+        {/* Navigation Tabs */}
+        <div className="flex border-b border-slate-200 px-6 bg-white gap-6">
+          <button
+            onClick={() => setActiveTab("overview")}
+            className={`py-3 text-xs font-bold border-b-2 -mb-px flex items-center gap-2 cursor-pointer transition-colors ${
+              activeTab === "overview"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            <User className="w-4 h-4" /> Customer Profile
+          </button>
+          <button
+            onClick={() => setActiveTab("payments")}
+            className={`py-3 text-xs font-bold border-b-2 -mb-px flex items-center gap-2 cursor-pointer transition-colors ${
+              activeTab === "payments"
+                ? "border-emerald-600 text-emerald-600"
+                : "border-transparent text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            <CreditCard className="w-4 h-4" /> Payments & History
+            {payments.length > 0 && (
+              <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                {payments.length}
+              </span>
+            )}
+          </button>
+        </div>
+
         {/* Modal Body */}
         <div className="p-6 overflow-y-auto space-y-5 flex-1">
           {loading ? (
             <div className="py-16 text-center text-slate-500 font-semibold text-xs space-y-2">
               <div className="w-6 h-6 border-2 border-blue-600/30 border-t-blue-600 rounded-full animate-spin mx-auto" />
-              <p>Loading full customer details & application history...</p>
+              <p>Loading full customer details...</p>
             </div>
-          ) : customer ? (
+          ) : activeTab === "overview" && customer ? (
             <>
               {/* Top Highlight Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -154,12 +344,12 @@ export default function CustomerDetailsModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50/70 p-4 rounded-xl border border-slate-100 text-xs">
                   <div>
                     <span className="text-slate-400 block text-[11px]">Full Name</span>
-                    <span className="font-semibold text-slate-800">{customer.full_name || customer.name || "-"}</span>
+                    <span className="font-semibold text-slate-800">{customer.full_name || customer.name || customer.fullName || "-"}</span>
                   </div>
                   <div>
                     <span className="text-slate-400 block text-[11px]">Mobile Number</span>
                     <span className="font-semibold text-slate-800 flex items-center gap-1">
-                      <Phone className="w-3 h-3 text-slate-400" /> {customer.mobile_number || customer.mobile || "-"}
+                      <Phone className="w-3 h-3 text-slate-400" /> {customer.mobile_number || customer.mobile || customer.mobileNumber || "-"}
                     </span>
                   </div>
                   <div>
@@ -205,59 +395,167 @@ export default function CustomerDetailsModal({
                 </div>
               </div>
 
-              {/* Loan Application History */}
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                    <FileText className="w-3.5 h-3.5 text-blue-600" /> Loan Application History
+              {/* Quick Payment Banner */}
+              <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-xl flex items-center justify-between">
+                <div>
+                  <h5 className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                    <CreditCard className="w-4 h-4 text-emerald-600" /> Loan Fee Payment Request
+                  </h5>
+                  <p className="text-[11px] text-emerald-700 mt-0.5">
+                    Send a payment link via SMS/Email to collect fees via Razorpay.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setActiveTab("payments")}
+                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer"
+                >
+                  Manage Payments
+                </button>
+              </div>
+            </>
+          ) : activeTab === "payments" && customer ? (
+            <div className="space-y-6">
+              {/* Payment Request Form for Manager */}
+              <div className="bg-slate-50/90 p-5 sm:p-6 rounded-2xl border border-slate-200 space-y-4 shadow-2xs">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <Send className="w-3.5 h-3.5 text-emerald-600" /> Send Payment Request
                   </h4>
-                  <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
-                    {(customer.applications || []).length} Records
+                  <span className="text-[11px] text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 font-semibold flex items-center gap-1 shadow-2xs">
+                    <Mail className="w-3 h-3 text-emerald-600" /> SMS & Email Notification
                   </span>
                 </div>
 
-                {customer.applications && customer.applications.length > 0 ? (
-                  <div className="border border-slate-200 rounded-xl overflow-hidden">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-50 text-[11px] font-bold text-slate-500 uppercase border-b border-slate-100">
-                        <tr>
-                          <th className="p-3">App ID</th>
-                          <th className="p-3">Status</th>
-                          <th className="p-3">Assigned Manager</th>
-                          <th className="p-3">Applied Date</th>
-                          <th className="p-3">Last Updated</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {customer.applications.map((app) => (
-                          <tr key={app.id} className="hover:bg-slate-50/50">
-                            <td className="p-3 font-mono font-bold text-blue-600">#{app.id}</td>
-                            <td className="p-3">
-                              <span
-                                className={`inline-block px-2 py-0.5 rounded-full font-bold text-[10px] border ${formatStatusBadge(
-                                  app.status
-                                )}`}
-                              >
-                                {formatStatusText(app.status)}
+                <form onSubmit={handleSendPaymentRequest} className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="text-xs font-semibold text-slate-700 block mb-1.5">
+                        Fee Type <span className="text-rose-500">*</span>
+                      </label>
+                      <select
+                        value={feeType}
+                        onChange={(e) => setFeeType(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 cursor-pointer shadow-2xs"
+                      >
+                        <option value="processing_fee">Processing Fee</option>
+                        <option value="documentation_fee">Documentation Fee</option>
+                        <option value="valuation_fee">Property Valuation Fee</option>
+                        <option value="legal_fee">Legal Verification Fee</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-slate-700 block mb-1.5">
+                        Amount (₹) <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        step="any"
+                        required
+                        placeholder="e.g. 2500"
+                        value={paymentAmount}
+                        onChange={(e) => setPaymentAmount(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 shadow-2xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="text-xs text-slate-500 flex items-center gap-1.5 flex-wrap">
+                      <span>Sending to:</span>
+                      <span className="font-semibold text-slate-800 bg-white px-2.5 py-0.5 rounded-md border border-slate-200 text-xs shadow-2xs font-mono">
+                        {customer.mobile_number || customer.mobile || customer.mobileNumber || "Registered Mobile"}
+                      </span>
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={submittingPayment}
+                      className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer disabled:opacity-50 shrink-0"
+                    >
+                      {submittingPayment ? (
+                        <>
+                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Sending Request...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-3.5 h-3.5" />
+                          <span>Send Payment Request</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Customer Payment History List */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <CreditCard className="w-3.5 h-3.5 text-blue-600" /> Payment History ({payments.length})
+                  </h4>
+                  <button
+                    onClick={fetchPaymentHistory}
+                    disabled={paymentsLoading}
+                    title="Refresh payment records"
+                    className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${paymentsLoading ? "animate-spin text-blue-600" : ""}`} />
+                  </button>
+                </div>
+
+                {paymentsLoading ? (
+                  <div className="py-10 text-center text-slate-500 font-semibold text-xs space-y-2">
+                    <div className="w-5 h-5 border-2 border-emerald-600/30 border-t-emerald-600 rounded-full animate-spin mx-auto" />
+                    <p>Loading customer payment history...</p>
+                  </div>
+                ) : payments.length > 0 ? (
+                  <div className="space-y-2.5">
+                    {payments.map((p, idx) => {
+                      const badge = getPaymentStatusBadge(p.status);
+                      return (
+                        <div
+                          key={p.id || idx}
+                          className="bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-2xs hover:border-slate-300 transition-all space-y-2"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="text-xs font-bold text-slate-800 block">
+                                {(p.fee_type || p.feeType || "Processing Fee").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
                               </span>
-                            </td>
-                            <td className="p-3 font-semibold text-slate-700">
-                              {app.assigned_manager_name || "Self"}
-                            </td>
-                            <td className="p-3 text-slate-500">{formatDate(app.created_at)}</td>
-                            <td className="p-3 text-slate-500">{formatDate(app.updated_at)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                              <span className="text-[11px] text-slate-400 font-mono">
+                                Ref ID: {p.gateway_order_id || p.gatewayOrderId || p.order_id || p.orderId || `#${p.id}`}
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-sm font-extrabold text-emerald-700 block">
+                                ₹{Number(p.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                              </span>
+                              <span
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border mt-0.5 ${badge.bg}`}
+                              >
+                                {badge.icon}
+                                {badge.text}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+                            <span>Record #{p.id}</span>
+                            <span>{formatDateTime(p.created_at || p.createdAt)}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 text-center text-xs text-slate-400">
-                    No loan application records found for this customer.
+                  <div className="p-8 bg-slate-50 rounded-xl border border-slate-100 text-center text-xs text-slate-400 space-y-1">
+                    <p className="font-medium text-slate-500">No payment records found for this customer.</p>
+                    <p className="text-[11px]">Use the form above to send an email/SMS payment request to the customer.</p>
                   </div>
                 )}
               </div>
-            </>
+            </div>
           ) : null}
         </div>
 

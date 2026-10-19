@@ -4,7 +4,7 @@ const customerModel = require("../models/customerModel");
 const auditLogModel = require("../models/auditLogModel");
 const { sendEmail } = require("../utils/mailer");
 const { sendSms } = require("../utils/sms");
-const cashfree = require("../utils/cashfree");
+const razorpay = require("../utils/razorpay");
 const { paymentRequestEmail, paymentReceiptEmail } = require("../utils/emailTemplates");
 
 async function assertAccessToCustomer(customerId, user) {
@@ -27,17 +27,20 @@ async function createPaymentRequest(req, res) {
   const application = await paymentModel.findLatestApplicationForCustomer(customerId);
   if (!application) return res.status(400).json({ message: "Customer has no application to attach this payment to" });
 
-  const orderId = `VF-PAY-${Date.now()}`;
+  // Our own reference (sent to Razorpay as `receipt`). Razorpay itself generates
+  // the real order id (order_XXXX), which is what we store as gateway_order_id.
+  const receipt = `VF-PAY-${Date.now()}`;
   let gatewayInfo;
   try {
-    gatewayInfo = await cashfree.createOrder({
-      orderId, amount, customerId,
+    gatewayInfo = await razorpay.createOrder({
+      receipt, amount, customerId,
       customerPhone: customer.mobile_number,
       customerEmail: customer.email,
     });
   } catch (err) {
     return res.status(502).json({ message: "Payment gateway error", error: err.message });
   }
+  const orderId = gatewayInfo.order_id;
 
   const payment = await paymentModel.create({
     applicationId: application.id, amount, feeType, gatewayOrderId: orderId,
@@ -136,22 +139,83 @@ async function sendPaymentConfirmation(payment) {
   });
 }
 
-async function handleWebhook(req, res) {
-  const signature = req.headers["x-webhook-signature"];
-  const timestamp = req.headers["x-webhook-timestamp"];
+// Called by the browser right after Razorpay Checkout succeeds. Razorpay hands
+// the browser { razorpay_order_id, razorpay_payment_id, razorpay_signature };
+// the signature proves the payment is genuine, so the status is only flipped
+// to 'successful' after it is verified here on the server.
+async function verifyPayment(req, res) {
+  const {
+    razorpay_order_id: orderId,
+    razorpay_payment_id: gatewayPaymentId,
+    razorpay_signature: signature,
+  } = req.body;
 
-  const isValid = cashfree.verifyWebhookSignature({ rawBody: req.rawBody, timestamp, signature });
-  if (!isValid) return res.status(400).json({ message: "Invalid webhook signature" });
-
-  const { data } = req.body;
-  const orderId = data?.order?.order_id;
-  const paymentStatus = data?.payment?.payment_status;
-  const gatewayPaymentId = data?.payment?.cf_payment_id;
+  if (!orderId || !gatewayPaymentId || !signature) {
+    return res.status(400).json({
+      message: "razorpay_order_id, razorpay_payment_id and razorpay_signature are required",
+    });
+  }
 
   const payment = await paymentModel.findByGatewayOrderId(orderId);
   if (!payment) return res.status(404).json({ message: "Payment not found for this order" });
 
-  const newStatus = paymentStatus === "SUCCESS" ? "successful" : "failed";
+  const customer = await paymentModel.findCustomerByApplicationId(payment.application_id);
+  if (req.user.role === "manager" && (!customer || customer.created_by !== req.user.id)) {
+    return res.status(403).json({ message: "You can only verify payments for customers you registered" });
+  }
+
+  // Use the order id stored on OUR side (payment.gateway_order_id), not only the one the browser sent.
+  const isValid = razorpay.verifyPaymentSignature({
+    orderId: payment.gateway_order_id,
+    paymentId: gatewayPaymentId,
+    signature,
+  });
+  if (!isValid) return res.status(400).json({ message: "Invalid payment signature" });
+
+  // Already confirmed (e.g. the webhook got there first) — don't send duplicate emails/SMS.
+  if (payment.status === "successful") return res.json(payment);
+
+  const updated = await paymentModel.updateStatus(payment.id, "successful", gatewayPaymentId);
+
+  await auditLogModel.record({
+    userId: req.user.id,
+    action: "verify_payment",
+    entity: "payments",
+    entityId: updated.id,
+    details: `Razorpay payment ${gatewayPaymentId} verified for order ${orderId} -> successful`,
+  });
+
+  await sendPaymentConfirmation(updated);
+
+  res.json(updated);
+}
+
+async function handleWebhook(req, res) {
+  const signature = req.headers["x-razorpay-signature"];
+
+  const isValid = razorpay.verifyWebhookSignature({ rawBody: req.rawBody, signature });
+  if (!isValid) return res.status(400).json({ message: "Invalid webhook signature" });
+
+  const event = req.body?.event;
+  const paymentEntity = req.body?.payload?.payment?.entity;
+  const orderEntity = req.body?.payload?.order?.entity;
+
+  let newStatus;
+  if (event === "payment.captured" || event === "order.paid") newStatus = "successful";
+  else if (event === "payment.failed") newStatus = "failed";
+  else return res.status(200).json({ received: true, ignored: event || "unknown_event" });
+
+  const orderId = paymentEntity?.order_id || orderEntity?.id;
+  const gatewayPaymentId = paymentEntity?.id;
+
+  const payment = await paymentModel.findByGatewayOrderId(orderId);
+  if (!payment) return res.status(404).json({ message: "Payment not found for this order" });
+
+  // Razorpay can deliver the same event more than once, out of order, and a
+  // customer can fail an attempt and then succeed on the same order. Never
+  // downgrade a successful payment, and don't re-run side effects for it.
+  if (payment.status === "successful") return res.status(200).json({ received: true });
+
   const updated = await paymentModel.updateStatus(payment.id, newStatus, gatewayPaymentId);
 
   await auditLogModel.record({
@@ -159,7 +223,7 @@ async function handleWebhook(req, res) {
     action: "payment_webhook",
     entity: "payments",
     entityId: updated.id,
-    details: `Cashfree webhook: order ${orderId} -> ${newStatus}`,
+    details: `Razorpay webhook (${event}): order ${orderId} -> ${newStatus}`,
   });
 
   if (newStatus === "successful") await sendPaymentConfirmation(updated);
@@ -167,4 +231,4 @@ async function handleWebhook(req, res) {
   res.status(200).json({ received: true });
 }
 
-module.exports = { createPaymentRequest, listPayments, updatePaymentStatus, handleWebhook };
+module.exports = { createPaymentRequest, listPayments, updatePaymentStatus, verifyPayment, handleWebhook };

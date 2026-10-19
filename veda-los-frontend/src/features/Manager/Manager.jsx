@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { LayoutDashboard, Users, FileText } from "lucide-react";
 import { toast } from "react-toastify";
-import { load } from "@cashfreepayments/cashfree-js";
 import apiService from "../../services/api-service";
 
 // Import Generic Components
@@ -377,26 +376,8 @@ export default function Manager({ onLogout }) {
   };
 
   const handleViewCustomerDetails = async (cust) => {
-    setIsPaymentModalOpen(true);
-    setPaymentHistoryLoading(true);
-    setPaymentHistoryCustomer(cust);
-    setPaymentHistoryList([]);
-    try {
-      const targetId = cust.rawId || (typeof cust.id === "string" ? cust.id.replace(/^CUST-/, "") : cust.id);
-      const response = await apiService.GetPaymentHistory(targetId);
-      const resData = response.data?.data || response.data?.payments || response.data?.payment || response.data;
-      const list = Array.isArray(resData)
-        ? resData
-        : resData && typeof resData === "object" && (resData.id || resData.amount || resData.gateway_order_id)
-        ? [resData]
-        : [];
-      setPaymentHistoryList(list);
-    } catch (error) {
-      console.error("Failed to fetch customer payment history:", error);
-      setPaymentHistoryList([]);
-    } finally {
-      setPaymentHistoryLoading(false);
-    }
+    setDetailCustomer(cust);
+    setIsDetailModalOpen(true);
   };
 
   const handleStageChange = (custId, newStage) => {
@@ -424,44 +405,14 @@ export default function Manager({ onLogout }) {
       const custId = selectedCustomer.rawId || (typeof selectedCustomer.id === "number" ? selectedCustomer.id : Number(String(selectedCustomer.id).replace(/^CUST-|^VF-2026-0*/, ""))) || selectedCustomer.id;
 
       const payload = {
-        customerId: typeof custId === "string" && !isNaN(Number(custId)) ? Number(custId) : custId,
+        customerId: String(custId),
         amount: Number(paymentAmount),
         feeType: paymentType || "processing_fee"
       };
 
-      const response = await apiService.ManagersPaymentRequest(payload);
-      const resData = response.data;
+      await apiService.ManagersPaymentRequest(payload);
 
-      // Extract and validate Cashfree payment_session_id from backend response
-      const rawSessionId =
-        resData?.gateway?.payment_session_id ||
-        resData?.gateway?.paymentSessionId ||
-        resData?.payment_session_id ||
-        resData?.paymentSessionId ||
-        resData?.data?.payment_session_id ||
-        resData?.data?.paymentSessionId ||
-        resData?.data?.gateway?.payment_session_id ||
-        resData?.data?.gateway?.paymentSessionId;
-
-      // Cashfree PG payment_session_id strictly starts with "session_"
-      const isValidCashfreeSession =
-        typeof rawSessionId === "string" &&
-        rawSessionId.trim().startsWith("session_");
-
-      if (isValidCashfreeSession) {
-        try {
-          // Initialize Cashfree JS SDK in sandbox mode
-          const cashfree = await load({ mode: "sandbox" });
-          await cashfree.checkout({
-            paymentSessionId: rawSessionId.trim(),
-            redirectTarget: "_modal"
-          });
-        } catch (checkoutErr) {
-          console.error("Cashfree checkout error:", checkoutErr);
-        }
-      }
-
-      toast.success(`Payment request of ₹${Number(paymentAmount).toLocaleString()} created successfully!`);
+      toast.success("Payment request and email/SMS sent to customer");
 
       handleStageChange(selectedCustomer.id, "Payment Requested");
       fetchCustomers();
@@ -627,6 +578,7 @@ export default function Manager({ onLogout }) {
           setSelectedCustomer(cust);
           setActiveModal("docUpload");
         }}
+        onPaymentSuccess={fetchCustomers}
       />
 
       {/* Payment History Modal */}

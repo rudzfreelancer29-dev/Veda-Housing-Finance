@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, User, Phone, Mail, CreditCard, Calendar, CheckCircle2, Clock, AlertCircle, Edit } from "lucide-react";
+import { X, User, Phone, Mail, CreditCard, Calendar, CheckCircle2, Clock, AlertCircle, Edit, Send, Plus } from "lucide-react";
 import { toast } from "react-toastify";
 import apiService from "../../services/api-service";
 
@@ -19,6 +19,10 @@ export default function PaymentHistoryModal({
   onPaymentUpdated
 }) {
   const [paymentList, setPaymentList] = useState(payments || []);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [feeType, setFeeType] = useState("processing_fee");
+  const [requestLoading, setRequestLoading] = useState(false);
+  const [showRequestForm, setShowRequestForm] = useState(false);
   const [statusModal, setStatusModal] = useState({
     isOpen: false,
     paymentRecord: null,
@@ -29,6 +33,66 @@ export default function PaymentHistoryModal({
   useEffect(() => {
     setPaymentList(payments || []);
   }, [payments]);
+
+  const handleSendPaymentRequest = async (e) => {
+    e.preventDefault();
+    const custId = customer?.rawId || customer?.id || customer?.referenceId || customer?.reference_id;
+    if (!custId) {
+      toast.error("Customer ID is missing.");
+      return;
+    }
+
+    const numAmount = Number(paymentAmount);
+    if (!numAmount || numAmount <= 0) {
+      toast.warn("Please enter a valid amount.");
+      return;
+    }
+
+    setRequestLoading(true);
+    try {
+      const targetId = typeof custId === "string" ? custId.replace(/^CUST-/, "") : custId;
+      const payload = {
+        customerId: String(targetId),
+        amount: numAmount,
+        feeType: feeType || "processing_fee"
+      };
+
+      await apiService.ManagersPaymentRequest(payload);
+      toast.success("Payment request and email/SMS sent to customer");
+
+      setPaymentAmount("");
+      setShowRequestForm(false);
+
+      // Refresh payment history
+      const response = await apiService.GetPaymentHistory(targetId);
+      const resData =
+        response.data?.data ||
+        response.data?.payments ||
+        response.data?.payment ||
+        response.data;
+
+      const list = Array.isArray(resData)
+        ? resData
+        : resData && typeof resData === "object" && (resData.id || resData.amount || resData.gateway_order_id)
+        ? [resData]
+        : [];
+
+      setPaymentList(list);
+
+      if (onPaymentUpdated) {
+        onPaymentUpdated();
+      }
+    } catch (err) {
+      console.error("Failed to send payment request:", err);
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        "Failed to send payment request. Please try again.";
+      toast.error(msg);
+    } finally {
+      setRequestLoading(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -196,7 +260,59 @@ export default function PaymentHistoryModal({
               <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                 <CreditCard className="w-3.5 h-3.5 text-emerald-600" /> Payment Records ({paymentList.length})
               </h4>
+              <button
+                type="button"
+                onClick={() => setShowRequestForm(!showRequestForm)}
+                className="px-2.5 py-1 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg flex items-center gap-1 cursor-pointer transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>{showRequestForm ? "Cancel Request" : "Send Payment Request"}</span>
+              </button>
             </div>
+
+            {showRequestForm && (
+              <form onSubmit={handleSendPaymentRequest} className="bg-emerald-50/50 border border-emerald-200/80 p-3.5 rounded-xl space-y-2.5 animate-in fade-in">
+                <h5 className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                  <Send className="w-3.5 h-3.5 text-emerald-600" /> Issue New Payment Request
+                </h5>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600 block mb-1">Fee Type</label>
+                    <select
+                      value={feeType}
+                      onChange={(e) => setFeeType(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-800"
+                    >
+                      <option value="processing_fee">Processing Fee</option>
+                      <option value="documentation_fee">Documentation Fee</option>
+                      <option value="valuation_fee">Valuation Fee</option>
+                      <option value="legal_fee">Legal Fee</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600 block mb-1">Amount (₹)</label>
+                    <input
+                      required
+                      type="number"
+                      min="1"
+                      placeholder="e.g. 2500"
+                      value={paymentAmount}
+                      onChange={(e) => setPaymentAmount(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-800"
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end gap-2 pt-1">
+                  <button
+                    type="submit"
+                    disabled={requestLoading}
+                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {requestLoading ? "Sending Request..." : "Submit Payment Request"}
+                  </button>
+                </div>
+              </form>
+            )}
 
             {loading ? (
               <div className="py-12 text-center text-slate-500 font-semibold text-xs space-y-2">

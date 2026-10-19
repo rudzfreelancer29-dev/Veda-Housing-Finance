@@ -8,6 +8,7 @@ router.post("/webhook", paymentController.handleWebhook);
 
 router.use(authenticate);
 router.post("/", authorize("manager"), paymentController.createPaymentRequest);
+router.post("/verify", authorize("manager", "super_admin"), paymentController.verifyPayment);
 router.get("/:customerId", authorize("manager", "super_admin"), paymentController.listPayments);
 router.put("/:id/status", authorize("manager", "super_admin"), paymentController.updatePaymentStatus);
 

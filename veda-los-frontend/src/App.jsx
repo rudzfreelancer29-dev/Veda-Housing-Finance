@@ -5,6 +5,7 @@ import Register from "./Authentication/Register";
 import ResetPassword from "./Authentication/Reset-Password";
 import Admin from "./features/admin/admin";
 import Manager from "./features/Manager/Manager";
+import CustomerCheckoutPage from "./features/Payment/CustomerCheckoutPage";
 
 function getAuthenticatedRole() {
   const token = sessionStorage.getItem("token") || localStorage.getItem("token");
@@ -46,6 +47,12 @@ export default function App() {
       const authRole = getAuthenticatedRole();
       const path = window.location.pathname.toLowerCase();
 
+      // If on public /pay route, never redirect
+      if (path === "/pay" || path.startsWith("/pay")) {
+        setCurrentPath(window.location.pathname);
+        return;
+      }
+
       // If authenticated user presses back button to login / root / register
       if (authRole && (path === "/login" || path === "/" || path === "/register")) {
         const dashboardPath = authRole === "Manager" ? "/manager" : "/admin";
@@ -77,6 +84,11 @@ export default function App() {
   const renderComponent = () => {
     const authRole = getAuthenticatedRole();
     const path = currentPath.toLowerCase();
+
+    // 0. Public Customer Checkout Page (No Authentication Needed)
+    if (path === "/pay" || path.startsWith("/pay")) {
+      return <CustomerCheckoutPage />;
+    }
 
     // 1. Reset Password route (always accessible with reset link)
     if (path === "/reset-password" || path.startsWith("/reset-password")) {

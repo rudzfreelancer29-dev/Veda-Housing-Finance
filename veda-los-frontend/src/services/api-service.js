@@ -119,6 +119,10 @@ class ApiService {
         return axios.get(`${environment.CRMService_API}${environment.GetPaymentHistory}${customerId}`);
     }
 
+    verifyPayment(data){
+        return axios.post(`${environment.CRMService_API}${environment.VerifyPayment}`, data);
+    }
+
     UpdatePaymentStatus(applicationId, status){
         return axios.put(`${environment.CRMService_API}${environment.UpdatePaymentStatus}${applicationId}/status`, status);
     }
