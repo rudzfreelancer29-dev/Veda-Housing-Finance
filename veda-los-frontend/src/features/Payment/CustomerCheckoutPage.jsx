@@ -78,11 +78,18 @@ export default function CustomerCheckoutPage() {
         return;
       }
 
-      // Read key_id from environment variable
+      // Read key_id from environment variable (Vite requires VITE_ prefix)
       const razorpayKey =
-        (typeof import.meta !== "undefined" && import.meta.env?.VITE_RAZORPAY_KEY_ID) ||
-        (typeof process !== "undefined" && process.env?.REACT_APP_RAZORPAY_KEY_ID) ||
-        "rzp_test_YourKeyId";
+        (typeof import.meta !== "undefined" && (import.meta.env?.VITE_RAZORPAY_KEY_ID || import.meta.env?.REACT_APP_RAZORPAY_KEY_ID || import.meta.env?.RAZORPAY_KEY_ID)) ||
+        (typeof process !== "undefined" && (process.env?.VITE_RAZORPAY_KEY_ID || process.env?.REACT_APP_RAZORPAY_KEY_ID || process.env?.RAZORPAY_KEY_ID)) ||
+        "rzp_test_Tox5HPsg8O19wO";
+
+      if (!razorpayKey) {
+        setErrorMessage("Razorpay Key ID is not configured. Please define VITE_RAZORPAY_KEY_ID in your .env file.");
+        setPageStatus("error");
+        setIsOpeningCheckout(false);
+        return;
+      }
 
       const options = {
         key: razorpayKey,
