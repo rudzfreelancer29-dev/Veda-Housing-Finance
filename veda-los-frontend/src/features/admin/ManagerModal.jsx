@@ -8,7 +8,7 @@ export default function ManagerModal({
   modalMode,
   managerForm,
   setManagerForm,
-  loading = false
+  loading = false,
 }) {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
@@ -19,7 +19,11 @@ export default function ManagerModal({
     const newErrors = {};
     const nameTrimmed = (managerForm.name || "").trim();
     const emailTrimmed = (managerForm.email || "").trim();
-    const mobileTrimmed = (managerForm.mobile_number || managerForm.mobile || "").trim();
+    const mobileTrimmed = (
+      managerForm.mobile_number ||
+      managerForm.mobile ||
+      ""
+    ).trim();
     const password = managerForm.password || "";
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const mobileRegex = /^[6-9]\d{9}$/;
@@ -33,7 +37,8 @@ export default function ManagerModal({
     if (!mobileTrimmed) {
       newErrors.mobile = "Mobile number is required.";
     } else if (!mobileRegex.test(mobileTrimmed)) {
-      newErrors.mobile = "Please enter a valid 10-digit mobile number starting with 6-9.";
+      newErrors.mobile =
+        "Please enter a valid 10-digit mobile number starting with 6-9.";
     }
 
     if (!emailTrimmed) {
@@ -87,9 +92,11 @@ export default function ManagerModal({
       <div className="bg-white rounded-xl border border-slate-200 shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         <div className="px-6 py-4.5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
           <h3 className="font-bold text-slate-800 text-md">
-            {modalMode === "add" ? "Register Manager Account" : "Edit Manager Details"}
+            {modalMode === "add"
+              ? "Register Manager Account"
+              : "Edit Manager Details"}
           </h3>
-          <button 
+          <button
             type="button"
             onClick={handleClose}
             className="text-slate-400 hover:text-slate-600 text-sm font-bold p-1 rounded-lg hover:bg-slate-100 cursor-pointer"
@@ -101,7 +108,9 @@ export default function ManagerModal({
         <form onSubmit={handleFormSubmit} noValidate className="p-6 space-y-4">
           {/* Full Name */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Full Name</label>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+              Full Name
+            </label>
             <input
               type="text"
               placeholder="e.g. John Doe"
@@ -123,7 +132,9 @@ export default function ManagerModal({
 
           {/* Email Address */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Email Address</label>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+              Email Address
+            </label>
             <input
               type="email"
               placeholder="e.g. name@vedafinance.com"
@@ -145,12 +156,19 @@ export default function ManagerModal({
 
           {/* Mobile No. */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Mobile No.</label>
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+              Mobile No.
+            </label>
             <input
               type="tel"
               maxLength={10}
               placeholder="e.g. 9876543210"
-              value={managerForm.mobile || managerForm.mobile_number || managerForm.phone || ""}
+              value={
+                managerForm.mobile ||
+                managerForm.mobile_number ||
+                managerForm.phone ||
+                ""
+              }
               onChange={(e) => {
                 const val = e.target.value.replace(/\D/g, "");
                 handleFieldChange("mobile", val);
@@ -172,7 +190,12 @@ export default function ManagerModal({
           {/* Password */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
-              Password {modalMode === "edit" && <span className="text-slate-400 font-normal lowercase">(leave blank to keep current)</span>}
+              Password{" "}
+              {modalMode === "edit" && (
+                <span className="text-slate-400 font-normal lowercase">
+                  (leave blank to keep current)
+                </span>
+              )}
             </label>
             <div className="relative">
               <input
@@ -191,7 +214,11 @@ export default function ManagerModal({
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
               >
-                {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                {showPassword ? (
+                  <Eye className="w-4 h-4" />
+                ) : (
+                  <EyeOff className="w-4 h-4" />
+                )}
               </button>
             </div>
             {errors.password && (
@@ -201,7 +228,6 @@ export default function ManagerModal({
               </p>
             )}
           </div>
-
 
           <div className="pt-4 border-t border-slate-100 flex justify-end gap-2 text-sm font-semibold">
             <button
@@ -216,8 +242,12 @@ export default function ManagerModal({
               disabled={loading}
               className="px-4 py-2 bg-[#f26e21] hover:bg-[#e05f13] text-white rounded-lg shadow-sm disabled:opacity-70 flex items-center gap-2 cursor-pointer"
             >
-              {loading && <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-              <span>{modalMode === "add" ? "Create Account" : "Save Changes"}</span>
+              {loading && (
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              )}
+              <span>
+                {modalMode === "add" ? "Create Account" : "Save Changes"}
+              </span>
             </button>
           </div>
         </form>

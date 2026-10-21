@@ -116,4 +116,4 @@ function verifyWebhookSignature({ rawBody, signature }) {
   return safeEqualHex(expected, signature);
 }
 
-module.exports = { createOrder, verifyPaymentSignature, verifyWebhookSignature };
+module.exports = { isMockMode, createOrder, verifyPaymentSignature, verifyWebhookSignature };

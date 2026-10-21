@@ -14,11 +14,12 @@ export default function Navbar({
   user = {
     name: "Super Admin",
     role: "Administrator",
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+    avatar:
+      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
   },
   onSetup,
   onOpenUpdatePassword,
-  onToggleSidebar
+  onToggleSidebar,
 }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -40,7 +41,10 @@ export default function Navbar({
       if (diffHours < 24) return `${diffHours}h ago`;
       const diffDays = Math.floor(diffHours / 24);
       if (diffDays < 7) return `${diffDays}d ago`;
-      return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
     } catch {
       return "Recently";
     }
@@ -58,18 +62,22 @@ export default function Navbar({
   function AdminName() {
     try {
       // 1. Read name from JSON 'user' in sessionStorage or localStorage
-      const userStr = sessionStorage.getItem("user") || localStorage.getItem("user");
+      const userStr =
+        sessionStorage.getItem("user") || localStorage.getItem("user");
       if (userStr) {
         const userObj = JSON.parse(userStr);
         if (userObj?.name) return userObj.name;
       }
 
       // 2. Fallback: Decode user name directly from JWT token payload
-      const token = sessionStorage.getItem("token") || localStorage.getItem("token");
+      const token =
+        sessionStorage.getItem("token") || localStorage.getItem("token");
       if (token) {
         const payloadBase64 = token.split(".")[1];
         if (payloadBase64) {
-          const decoded = JSON.parse(atob(payloadBase64.replace(/-/g, "+").replace(/_/g, "/")));
+          const decoded = JSON.parse(
+            atob(payloadBase64.replace(/-/g, "+").replace(/_/g, "/")),
+          );
           if (decoded?.name || decoded?.user?.name) {
             return decoded?.name || decoded?.user?.name;
           }
@@ -81,7 +89,7 @@ export default function Navbar({
     return user?.name || "Administrator";
   }
 
-  function onLogout(){
+  function onLogout() {
     try {
       sessionStorage.clear();
       localStorage.clear();
@@ -98,7 +106,10 @@ export default function Navbar({
       if (profileRef.current && !profileRef.current.contains(event.target)) {
         setShowProfileMenu(false);
       }
-      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+      if (
+        notificationsRef.current &&
+        !notificationsRef.current.contains(event.target)
+      ) {
         setShowNotifications(false);
       }
     }
@@ -106,8 +117,7 @@ export default function Navbar({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []
-);
+  }, []);
 
   return (
     <header className="bg-white border-b border-slate-200 w-full shrink-0 z-10 shadow-xs">
@@ -158,7 +168,9 @@ export default function Navbar({
             {showNotifications && (
               <div className="absolute right-0 mt-2 w-72 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-2">
                 <div className="px-4 py-2 border-b border-slate-100 flex justify-between items-center">
-                  <span className="font-semibold text-slate-800 text-xs">Notifications</span>
+                  <span className="font-semibold text-slate-800 text-xs">
+                    Notifications
+                  </span>
                   {onMarkNotificationsRead && notifications.length > 0 && (
                     <button
                       onClick={() => {
@@ -173,7 +185,9 @@ export default function Navbar({
                 </div>
                 <div className="max-h-60 overflow-y-auto">
                   {notifications.length === 0 ? (
-                    <p className="px-4 py-6 text-center text-xs text-slate-400">No new notifications</p>
+                    <p className="px-4 py-6 text-center text-xs text-slate-400">
+                      No new notifications
+                    </p>
                   ) : (
                     notifications.map((item, idx) => (
                       <div
@@ -191,10 +205,19 @@ export default function Navbar({
                       >
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-slate-800 group-hover:text-[#f26e21] transition-colors leading-snug">
-                            {item.text || item.message || item.title || item.details || "Notification"}
+                            {item.text ||
+                              item.message ||
+                              item.title ||
+                              item.details ||
+                              "Notification"}
                           </p>
                           <span className="text-[10px] text-slate-400 mt-0.5 block">
-                            {item.time || formatTime(item.createdAt || item.created_at || item.timestamp)}
+                            {item.time ||
+                              formatTime(
+                                item.createdAt ||
+                                  item.created_at ||
+                                  item.timestamp,
+                              )}
                           </span>
                         </div>
                         {onReadNotification && (
@@ -311,7 +334,9 @@ export default function Navbar({
             {showNotifications && (
               <div className="absolute right-0 mt-2.5 w-80 bg-white border border-slate-200 rounded-xl shadow-xl z-50 py-2">
                 <div className="px-4 py-2 border-b border-slate-100 flex justify-between items-center">
-                  <span className="font-semibold text-slate-800 text-xs">Notifications</span>
+                  <span className="font-semibold text-slate-800 text-xs">
+                    Notifications
+                  </span>
                   {onMarkNotificationsRead && notifications.length > 0 && (
                     <button
                       onClick={() => {
@@ -326,7 +351,9 @@ export default function Navbar({
                 </div>
                 <div className="max-h-60 overflow-y-auto">
                   {notifications.length === 0 ? (
-                    <p className="px-4 py-6 text-center text-xs text-slate-400">No new notifications</p>
+                    <p className="px-4 py-6 text-center text-xs text-slate-400">
+                      No new notifications
+                    </p>
                   ) : (
                     notifications.map((item, idx) => (
                       <div
@@ -344,10 +371,19 @@ export default function Navbar({
                       >
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-slate-800 group-hover:text-[#f26e21] transition-colors leading-snug">
-                            {item.text || item.message || item.title || item.details || "Notification"}
+                            {item.text ||
+                              item.message ||
+                              item.title ||
+                              item.details ||
+                              "Notification"}
                           </p>
                           <span className="text-[10px] text-slate-400 mt-0.5 block">
-                            {item.time || formatTime(item.createdAt || item.created_at || item.timestamp)}
+                            {item.time ||
+                              formatTime(
+                                item.createdAt ||
+                                  item.created_at ||
+                                  item.timestamp,
+                              )}
                           </span>
                         </div>
                         {onReadNotification && (
@@ -381,7 +417,9 @@ export default function Navbar({
                 {getInitials(AdminName(), "SA")}
               </div>
               <div className="text-left">
-                <span className="block text-xs font-semibold text-slate-800 leading-3">{AdminName()}</span>
+                <span className="block text-xs font-semibold text-slate-800 leading-3">
+                  {AdminName()}
+                </span>
                 <span className="text-[10px] text-slate-500">{user.role}</span>
               </div>
               <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
@@ -389,7 +427,9 @@ export default function Navbar({
 
             {showProfileMenu && (
               <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-lg shadow-lg z-50 py-1 text-sm">
-                <div className="px-4 py-2 border-b border-slate-100 font-medium text-slate-500 text-xs">DHANICAP Finance</div>
+                <div className="px-4 py-2 border-b border-slate-100 font-medium text-slate-500 text-xs">
+                  DHANICAP Finance
+                </div>
                 {onSetup && (
                   <button
                     onClick={() => {

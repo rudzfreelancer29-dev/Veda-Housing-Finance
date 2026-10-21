@@ -139,55 +139,69 @@ async function sendPaymentConfirmation(payment) {
   });
 }
 
-// Called by the browser right after Razorpay Checkout succeeds. Razorpay hands
-// the browser { razorpay_order_id, razorpay_payment_id, razorpay_signature };
-// the signature proves the payment is genuine, so the status is only flipped
-// to 'successful' after it is verified here on the server.
+// PUBLIC endpoint (no login): the customer pays from the link in their
+// email/SMS and has no Manager/Admin token. Razorpay Checkout hands the browser
+// { razorpay_order_id, razorpay_payment_id, razorpay_signature }. The signature
+// is HMAC-SHA256(order_id|payment_id) with our secret key, which only Razorpay
+// can produce — so it is the proof, and the status is flipped to 'successful'
+// only after it is verified here on the server.
 async function verifyPayment(req, res) {
+  // Without real Razorpay keys the signature check cannot prove anything
+  // (mock mode accepts any value), so never expose this publicly in that state.
+  if (razorpay.isMockMode()) {
+    return res.status(503).json({ message: "Online payment verification is not available right now" });
+  }
+
   const {
     razorpay_order_id: orderId,
     razorpay_payment_id: gatewayPaymentId,
     razorpay_signature: signature,
-  } = req.body;
+  } = req.body || {};
 
-  if (!orderId || !gatewayPaymentId || !signature) {
+  // Public input: only accept plain, reasonably short strings (also keeps bad
+  // payloads from ever reaching the database layer).
+  const isCleanString = (v) => typeof v === "string" && v.length > 0 && v.length <= 200;
+  if (!isCleanString(orderId) || !isCleanString(gatewayPaymentId) || !isCleanString(signature)) {
     return res.status(400).json({
       message: "razorpay_order_id, razorpay_payment_id and razorpay_signature are required",
     });
   }
 
-  const payment = await paymentModel.findByGatewayOrderId(orderId);
-  if (!payment) return res.status(404).json({ message: "Payment not found for this order" });
+  try {
+    const payment = await paymentModel.findByGatewayOrderId(orderId);
 
-  const customer = await paymentModel.findCustomerByApplicationId(payment.application_id);
-  if (req.user.role === "manager" && (!customer || customer.created_by !== req.user.id)) {
-    return res.status(403).json({ message: "You can only verify payments for customers you registered" });
+    // Use the order id stored on OUR side (payment.gateway_order_id). Unknown
+    // order and wrong signature get the same answer so the endpoint reveals nothing.
+    const isValid =
+      !!payment &&
+      razorpay.verifyPaymentSignature({
+        orderId: payment.gateway_order_id,
+        paymentId: gatewayPaymentId,
+        signature,
+      });
+    if (!isValid) return res.status(400).json({ message: "Invalid payment verification request" });
+
+    // Already confirmed (e.g. the webhook got there first) — don't send duplicate emails/SMS.
+    if (payment.status === "successful") return res.json({ success: true, status: "successful" });
+
+    const updated = await paymentModel.updateStatus(payment.id, "successful", gatewayPaymentId);
+
+    await auditLogModel.record({
+      userId: null,
+      action: "verify_payment",
+      entity: "payments",
+      entityId: updated.id,
+      details: `Razorpay payment ${gatewayPaymentId} verified for order ${orderId} -> successful`,
+    });
+
+    await sendPaymentConfirmation(updated);
+
+    // Deliberately minimal: this response goes to an unauthenticated browser.
+    res.json({ success: true, status: updated.status });
+  } catch (err) {
+    console.error("verifyPayment failed:", err.message);
+    res.status(500).json({ message: "Could not verify payment right now" });
   }
-
-  // Use the order id stored on OUR side (payment.gateway_order_id), not only the one the browser sent.
-  const isValid = razorpay.verifyPaymentSignature({
-    orderId: payment.gateway_order_id,
-    paymentId: gatewayPaymentId,
-    signature,
-  });
-  if (!isValid) return res.status(400).json({ message: "Invalid payment signature" });
-
-  // Already confirmed (e.g. the webhook got there first) — don't send duplicate emails/SMS.
-  if (payment.status === "successful") return res.json(payment);
-
-  const updated = await paymentModel.updateStatus(payment.id, "successful", gatewayPaymentId);
-
-  await auditLogModel.record({
-    userId: req.user.id,
-    action: "verify_payment",
-    entity: "payments",
-    entityId: updated.id,
-    details: `Razorpay payment ${gatewayPaymentId} verified for order ${orderId} -> successful`,
-  });
-
-  await sendPaymentConfirmation(updated);
-
-  res.json(updated);
 }
 
 async function handleWebhook(req, res) {
