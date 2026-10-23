@@ -54,6 +54,8 @@ Team Dhanicap Finance`
   },
   {
     label: "CIBIL",
+    category: "cibil",
+    loanType: "General",
     subject: "Update on Your CIBIL Check – Dhanicap Finance",
     message: `Dear Customer,
 
@@ -63,6 +65,87 @@ Thank you for choosing Dhanicap Finance.
 
 Best Regards,
 Team Dhanicap Finance`
+  },
+  {
+    label: "CIBIL - Personal Loan",
+    category: "cibil",
+    loanType: "Personal Loan",
+    subject: "Attention! CIBIL Enquiry Alert – Personal Loan",
+    message: `Dear Customer,
+
+Greetings from Dhanicap Finance!
+
+We wish to inform you that a recent Personal Loan enquiry was made on your CIBIL Score and Report.
+
+The details of the enquiry are mentioned below:
+
+Bank Name:
+Enquiry Control Number (ECN): [ECN Number]
+Enquiry Purpose: PERSONAL LOAN
+Date of Enquiry: [Date and Time]
+
+In case of any queries or clarification regarding the above information, please contact the respective bank/financial institution or connect with Dhanicap Finance. Please quote your ECN number while communicating with them to help you receive assistance.
+
+A credit enquiry occurs when a bank or financial institution checks your CIBIL report, usually in connection with a loan or credit application. Please review your personal information and verify that the enquiry is familiar to you.
+
+Note: Dispute resolution is offered FREE of charge by CIBIL. Consumers are not required to pay any fee for rectifying discrepancies or updating their credit information.
+
+Best regards,
+Dhanicap Finance`
+  },
+  {
+    label: "CIBIL - Home Loan",
+    category: "cibil",
+    loanType: "Home Loan",
+    subject: "Attention! CIBIL Enquiry Alert – Home Loan",
+    message: `Dear Customer,
+
+Greetings from Dhanicap Finance!
+
+We wish to inform you that a recent Home Loan enquiry was made on your CIBIL Score and Report.
+
+The details of the enquiry are mentioned below:
+
+Bank Name:
+Enquiry Control Number (ECN): [ECN Number]
+Enquiry Purpose: HOME LOAN
+Date of Enquiry: [Date and Time]
+
+In case of any queries or clarification regarding the above information, please contact the respective bank/financial institution or connect with Dhanicap Finance. Please quote your ECN number while communicating with them to help you receive assistance.
+
+A credit enquiry occurs when a bank or financial institution checks your CIBIL report, usually in connection with a loan or credit application. Please review your personal information and verify that the enquiry is familiar to you.
+
+Note: Dispute resolution is offered FREE of charge by CIBIL. Consumers are not required to pay any fee for rectifying discrepancies or updating their credit information.
+
+Best regards,
+Dhanicap Finance`
+  },
+  {
+    label: "CIBIL - Mortgage Loan",
+    category: "cibil",
+    loanType: "Mortgage Loan",
+    subject: "Attention! CIBIL Enquiry Alert – Mortgage Loan",
+    message: `Dear Customer,
+
+Greetings from Dhanicap Finance!
+
+We wish to inform you that a recent Mortgage Loan enquiry was made on your CIBIL Score and Report.
+
+The details of the enquiry are mentioned below:
+
+Bank Name:
+Enquiry Control Number (ECN): [ECN Number]
+Enquiry Purpose: MORTGAGE LOAN
+Date of Enquiry: [Date and Time]
+
+In case of any queries or clarification regarding the above information, please contact the respective bank/financial institution or connect with Dhanicap Finance. Please quote your ECN number while communicating with them to help you receive assistance.
+
+A credit enquiry occurs when a bank or financial institution checks your CIBIL report, usually in connection with a loan or credit application. Please review your personal information and verify that the enquiry is familiar to you.
+
+Note: Dispute resolution is offered FREE of charge by CIBIL. Consumers are not required to pay any fee for rectifying discrepancies or updating their credit information.
+
+Best regards,
+Dhanicap Finance`
   }
 ];
 
@@ -72,12 +155,14 @@ export default function CustomCustomerMessage({
   customer,
   onSuccess
 }) {
+  const [selectedTemplate, setSelectedTemplate] = useState(TEMPLATES[0].label);
   const [subject, setSubject] = useState(TEMPLATES[0].subject);
   const [message, setMessage] = useState(TEMPLATES[0].message);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen && customer) {
+      setSelectedTemplate(TEMPLATES[0].label);
       setSubject(TEMPLATES[0].subject);
       const customerName = customer.fullName || customer.name || "Customer";
       setMessage(
@@ -95,6 +180,7 @@ export default function CustomCustomerMessage({
     customer.customerId;
 
   const handleApplyTemplate = (tmpl) => {
+    setSelectedTemplate(tmpl.label);
     const customerName = customer.fullName || customer.name || "Customer";
     setSubject(tmpl.subject);
     setMessage(tmpl.message.replace("Dear Customer", `Dear ${customerName}`));
@@ -199,17 +285,50 @@ export default function CustomCustomerMessage({
             <Sparkles className="w-3.5 h-3.5 text-purple-600" /> Quick Templates:
           </label>
           <div className="flex flex-wrap gap-1.5">
-            {TEMPLATES.map((tmpl) => (
-              <button
-                key={tmpl.label}
-                type="button"
-                onClick={() => handleApplyTemplate(tmpl)}
-                className="px-2.5 py-1 text-xs font-medium rounded-lg bg-slate-100 hover:bg-purple-50 hover:text-purple-700 text-slate-600 border border-slate-200 transition-colors cursor-pointer"
-              >
-                {tmpl.label}
-              </button>
-            ))}
+            {TEMPLATES.map((tmpl) => {
+              const isSelected = selectedTemplate === tmpl.label;
+              return (
+                <button
+                  key={tmpl.label}
+                  type="button"
+                  onClick={() => handleApplyTemplate(tmpl)}
+                  className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-all cursor-pointer ${
+                    isSelected
+                      ? "bg-purple-600 text-white border-purple-600 shadow-xs font-semibold"
+                      : "bg-slate-100 hover:bg-purple-50 hover:text-purple-700 text-slate-600 border-slate-200"
+                  }`}
+                >
+                  {tmpl.label}
+                </button>
+              );
+            })}
           </div>
+
+          {/* CIBIL Loan Type Quick Selector */}
+          {(selectedTemplate === "CIBIL" || selectedTemplate?.startsWith("CIBIL")) && (
+            <div className="mt-2.5 p-2.5 bg-purple-50/70 border border-purple-100 rounded-xl flex flex-wrap items-center gap-1.5 animate-in fade-in duration-150">
+              <span className="text-[11px] font-semibold text-purple-700 mr-1 flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-purple-600" /> CIBIL Loan Types:
+              </span>
+              {TEMPLATES.filter((t) => t.category === "cibil").map((tmpl) => {
+                const isSelected = selectedTemplate === tmpl.label;
+                return (
+                  <button
+                    key={tmpl.label}
+                    type="button"
+                    onClick={() => handleApplyTemplate(tmpl)}
+                    className={`px-2.5 py-1 text-[11px] font-medium rounded-lg transition-all cursor-pointer ${
+                      isSelected
+                        ? "bg-purple-600 text-white shadow-xs font-semibold"
+                        : "bg-white text-purple-700 hover:bg-purple-100 border border-purple-200"
+                    }`}
+                  >
+                    {tmpl.loanType || tmpl.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Form Form */}
